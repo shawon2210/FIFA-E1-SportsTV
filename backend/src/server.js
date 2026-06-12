@@ -23,6 +23,7 @@ const adminRouter = require('./routes/admin');
 const epgRouter = require('./routes/epg');
 const recRouter = require('./routes/recommendations');
 const accountsRouter = require('./routes/accounts');
+const streamRouter = require('./routes/stream');
 
 const app = express();
 const server = http.createServer(app);
@@ -124,6 +125,9 @@ v1.use('/recommendations', recRouter);
 // Auth & User Accounts
 v1.use('/auth', accountsRouter);
 v1.use('/users', accountsRouter);
+
+// Stream Proxy (smart routing, signed URLs, geo-aware)
+v1.use('/stream', streamRouter);
 
 // Admin (requires auth + admin role)
 v1.use('/admin', adminRouter);

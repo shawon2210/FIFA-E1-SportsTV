@@ -2,81 +2,66 @@
    A1TV — Navigation Module
    ============================================================ */
 
-var Nav = (() => {
-  let clockInterval;
-
-  function init() {
-    startLiveClock();
-    bindSettings();
-    bindSearchShortcut();
-  }
-
-  /* ── Clock ──────────────────────────────────────────────── */
-
-  function startLiveClock() {
-    updateClock();
-    clockInterval = setInterval(updateClock, 1000);
-  }
-
-  function updateClock() {
-    const now    = new Date();
-    const h      = String(now.getHours()).padStart(2, '0');
-    const m      = String(now.getMinutes()).padStart(2, '0');
-    const s      = String(now.getSeconds()).padStart(2, '0');
-    const timeEl = document.getElementById('top-clock');
-    if (timeEl) timeEl.textContent = `${h}:${m}:${s}`;
-  }
-
-  /* ── Settings Modal ─────────────────────────────────────── */
-
-  function bindSettings() {
-    const modal    = document.getElementById('settings-modal');
-    const closeBtn = document.getElementById('modal-close');
-
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeSettings();
-      });
-    }
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeSettings);
+var Nav = (function() {
+    function init() {
+        startClock();
+        bindSettings();
+        bindSearchShortcut();
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeSettings();
-    });
+    function startClock() {
+        var el = document.getElementById('top-clock');
+        if (!el) return;
+        setInterval(function() {
+            var now = new Date();
+            var hh = String(now.getHours()).padStart(2, '0');
+            var mm = String(now.getMinutes()).padStart(2, '0');
+            var ss = String(now.getSeconds()).padStart(2, '0');
+            el.textContent = hh + ':' + mm + ':' + ss;
+        }, 1000);
+    }
 
-    const btnSettings   = document.getElementById('btn-settings');
-    const btnSidebarSet = document.getElementById('nav-settings-btn');
-    [btnSettings, btnSidebarSet].forEach(b => b?.addEventListener('click', openSettings));
-  }
+    function bindSettings() {
+        var modal = document.getElementById('settings-modal');
+        var close = document.getElementById('modal-close');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) modal.classList.remove('open');
+            });
+        }
+        if (close) {
+            close.addEventListener('click', function() {
+                if (modal) modal.classList.remove('open');
+            });
+        }
+        var openBtns = [
+            document.getElementById('btn-settings'),
+            document.getElementById('nav-settings-btn')
+        ];
+        openBtns.forEach(function(btn) {
+            if (btn) btn.addEventListener('click', function() {
+                if (modal) modal.classList.add('open');
+            });
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (modal) modal.classList.remove('open');
+            }
+        });
+    }
 
-  function openSettings() {
-    const modal = document.getElementById('settings-modal');
-    if (modal) modal.classList.add('open');
-  }
-  function closeSettings() {
-    const modal = document.getElementById('settings-modal');
-    if (modal) modal.classList.remove('open');
-  }
+    function bindSearchShortcut() {
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                var input = document.getElementById('search-input');
+                if (input) input.focus();
+            }
+        });
+    }
 
-  /* ── Search Keyboard Shortcut ───────────────────────────── */
-
-  function bindSearchShortcut() {
-    document.addEventListener('keydown', (e) => {
-      if (e.key === '/' && e.target.tagName !== 'INPUT') {
-        e.preventDefault();
-        const el = document.getElementById('search-input');
-        if (el) el.focus();
-      }
-    });
-  }
-
-  /* ── Helpers ────────────────────────────────────────────── */
-
-  function destroy() {
-    clearInterval(clockInterval);
-  }
-
-  return { init, openSettings, closeSettings, destroy };
+    return {
+        init: init
+    };
 })();
+

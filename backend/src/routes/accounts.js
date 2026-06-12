@@ -6,7 +6,7 @@
 const { Router } = require('express');
 const db = require('../config/database');
 const authService = require('../services/auth');
-const { authenticate, optionalAuth, validate, body, query } = require('../middleware/auth');
+const { authenticate, optionalAuth, validate, body, query, requireDevice } = require('../middleware/auth');
 
 const router = Router();
 

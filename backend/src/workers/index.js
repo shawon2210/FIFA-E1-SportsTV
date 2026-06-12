@@ -8,6 +8,7 @@ const Redis = require('ioredis');
 const config = require('./config');
 const db = require('./config/database');
 const cache = require('./services/cache');
+const edgeCache = require('./services/edgeCache');
 
 const redisConn = new Redis({
     host: config.redis.host,
@@ -33,12 +34,17 @@ const queues = {
 
 // ── Workers ───────────────────────────────────────────────
 
-// 1. IPTV Sync (every 6h)
-const syncWorker = new Worker('iptv-sync', async () => {
+// 1. IPTV Sync (every 6h) + Edge Cache Preload (every 5 min)
+const syncWorker = new Worker('iptv-sync', async (job) => {
+    if (job.data?.type === 'edge-cache') {
+        const result = await edgeCache.preloadPopularChannels();
+        return { type: 'edge-preload', channelsLoaded: result };
+    }
     const svc = require('./services/iptvSync');
     const result = await svc.syncAll();
-    // Update source last_sync
     await db('sources').whereIn('name', ['iptv-org', 'free-tv', 'manual']).update({ last_sync: new Date(), sync_count: db.raw('sync_count + 1') });
+    // Invalidate playlist caches after sync
+    await edgeCache.invalidatePlaylists();
     return result;
 }, { connection: redisConn, concurrency: 1 });
 
@@ -114,6 +120,8 @@ async function setupScheduledJobs() {
         { queue: queues.recommendations, name: 'recs', data: {}, cron: '0 2 * * *', id: 'sch-recs' },
         { queue: queues.alerts, name: 'alerts', data: {}, cron: '* * * * *', id: 'sch-alerts' },
         { queue: queues.backup, name: 'backup', data: { type: 'postgres' }, cron: '0 3 * * *', id: 'sch-backup' },
+        // Edge cache preload: every 5 minutes
+        { queue: queues.sync, name: 'edge-preload', data: { type: 'edge-cache' }, cron: '*/5 * * * *', id: 'sch-edge-preload' },
     ];
 
     for (const job of jobs) {

@@ -1,0 +1,9 @@
+[     398ms] [LOG] %c A1TV v2.0 — Content Intelligence Layer  background:#00F2FE; color:#040711; font-weight:900; font-size:14px; border-radius:4px; padding:4px 10px; @ http://localhost:8080/js/app.js:566
+[     412ms] [LOG] PWA: Service worker registered http://localhost:8080/ @ http://localhost:8080/js/app.js:482
+[     419ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8080/favicon.ico:0
+[    2745ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:3000/api/v1/channels?limit=500&sort=popular:0
+[    2745ms] [WARNING] API load failed: Failed to fetch @ http://localhost:8080/js/app.js:158
+[    7544ms] [LOG] %c A1TV v2.0 — Content Intelligence Layer  background:#00F2FE; color:#040711; font-weight:900; font-size:14px; border-radius:4px; padding:4px 10px; @ http://localhost:8080/js/app.js:566
+[    7549ms] [LOG] PWA: Service worker registered http://localhost:8080/ @ http://localhost:8080/js/app.js:482
+[    9859ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:3000/api/v1/channels?limit=500&sort=popular:0
+[    9859ms] [WARNING] API load failed: Failed to fetch @ http://localhost:8080/js/app.js:158

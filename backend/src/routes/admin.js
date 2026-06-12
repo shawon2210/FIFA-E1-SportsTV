@@ -85,7 +85,7 @@ router.get('/channels/top', [
 });
 
 // ── GET /api/v1/admin/streams/health ────────────────────
-router.streams('/health', async (req, res) => {
+router.get('/health', async (req, res) => {
     try {
         const stats = await healthChecker.getStats();
         const failingHosts = await circuitBreaker.getFailingHosts();
