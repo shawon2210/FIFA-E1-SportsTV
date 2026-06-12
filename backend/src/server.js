@@ -19,6 +19,10 @@ const { router: metricsRouter, httpRequestDuration } = require('./routes/metrics
 const channelsRouter = require('./routes/channels');
 const searchRouter = require('./routes/index');
 const proxyRouter = require('./routes/proxy');
+const adminRouter = require('./routes/admin');
+const epgRouter = require('./routes/epg');
+const recRouter = require('./routes/recommendations');
+const accountsRouter = require('./routes/accounts');
 
 const app = express();
 const server = http.createServer(app);
@@ -110,6 +114,19 @@ v1.use('/analytics', searchRouter);
 
 // Stream proxy
 v1.use('/proxy', proxyRouter);
+
+// EPG (rich TV guide, timeline, reminders)
+v1.use('/epg', epgRouter);
+
+// Recommendations (personalized, trending, similar)
+v1.use('/recommendations', recRouter);
+
+// Auth & User Accounts
+v1.use('/auth', accountsRouter);
+v1.use('/users', accountsRouter);
+
+// Admin (requires auth + admin role)
+v1.use('/admin', adminRouter);
 
 // Mount v1 router
 app.use('/api/v1', v1);

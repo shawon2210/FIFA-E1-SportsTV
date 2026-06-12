@@ -1,0 +1,14 @@
+[     108ms] [LOG] %c A1TV Standalone — Powered by iptv-org  background:#00F2FE; color:#040711; font-weight:900; font-size:14px; border-radius:4px; padding:4px 10px; @ http://localhost:8080/js/app.js:516
+[     148ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8080/favicon.ico:0
+[     665ms] [LOG] ✓ Loaded 200 channels from iptv-org @ http://localhost:8080/js/app.js:156
+[     665ms] [WARNING] iptv-org load failed: CATS is not defined @ http://localhost:8080/js/app.js:163
+[    4317ms] [LOG] %c A1TV Standalone — Powered by iptv-org  background:#00F2FE; color:#040711; font-weight:900; font-size:14px; border-radius:4px; padding:4px 10px; @ http://localhost:8080/js/app.js:516
+[    4478ms] [LOG] ✓ Loaded 200 channels from iptv-org @ http://localhost:8080/js/app.js:156
+[    4478ms] [WARNING] iptv-org load failed: CATS is not defined @ http://localhost:8080/js/app.js:163
+[    5083ms] [LOG] %c A1TV Standalone — Powered by iptv-org  background:#00F2FE; color:#040711; font-weight:900; font-size:14px; border-radius:4px; padding:4px 10px; @ http://localhost:8080/js/app.js:516
+[    5221ms] [LOG] ✓ Loaded 200 channels from iptv-org @ http://localhost:8080/js/app.js:156
+[    5221ms] [WARNING] iptv-org load failed: CATS is not defined @ http://localhost:8080/js/app.js:163
+[   15401ms] [LOG] ✓ Loaded 200 channels from iptv-org @ http://localhost:8080/js/app.js:156
+[   15401ms] [WARNING] iptv-org load failed: CATS is not defined @ http://localhost:8080/js/app.js:163
+[   25568ms] [LOG] ✓ Loaded 200 channels from iptv-org @ http://localhost:8080/js/app.js:156
+[   25568ms] [WARNING] iptv-org load failed: CATS is not defined @ http://localhost:8080/js/app.js:163

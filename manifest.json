@@ -1,0 +1,14 @@
+{
+    "name": "A1TV — Premium Live Streaming",
+    "short_name": "A1TV",
+    "description": "Watch 3000+ live TV channels worldwide",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#08101F",
+    "theme_color": "#08101F",
+    "orientation": "any",
+    "icons": [
+        { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+        { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    ]
+}
