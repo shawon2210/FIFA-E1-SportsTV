@@ -1,0 +1,36 @@
+{
+    "name": "a1tv-backend",
+    "version": "2.0.0",
+    "description": "A1TV IPTV Backend — API, Health Checks, Stream Scoring, EPG",
+    "main": "src/server.js",
+    "scripts": {
+        "start": "node src/server.js",
+        "workers": "node src/workers/index.js",
+        "dev": "nodemon src/server.js",
+        "dev:workers": "nodemon src/workers/index.js",
+        "db:migrate": "knex migrate:latest --knexfile src/config/knexfile.js",
+        "db:seed": "knex seed:run --knexfile src/config/knexfile.js",
+        "db:reset": "knex migrate:rollback --all && knex migrate:latest && knex seed:run",
+        "sync": "node scripts/sync.js",
+        "health-check": "node scripts/healthCheck.js",
+        "score": "node scripts/score.js"
+    },
+    "dependencies": {
+        "axios": "^1.7.0",
+        "bullmq": "^5.8.0",
+        "compression": "^1.7.4",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.0",
+        "express": "^4.19.0",
+        "helmet": "^7.1.0",
+        "ioredis": "^5.4.0",
+        "knex": "^3.1.0",
+        "pg": "^8.13.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

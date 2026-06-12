@@ -1,0 +1,5 @@
+[     148ms] [LOG] %c FIFA E1 SportsTV — Powered by iptv-org/iptv  background:#00F2FE; color:#040711; font-weight:900; font-size:14px; border-radius:4px; padding:4px 10px; @ http://localhost:8080/js/app.js:717
+[     200ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8080/favicon.ico:0
+[     793ms] [LOG] %c IPTV: 300 channels loaded  background:#00F2FE; color:#040711; font-weight:900; font-size:12px; padding:4px 8px; border-radius:4px; @ http://localhost:8080/js/app.js:157
+[    1313ms] [ERROR] Access to XMLHttpRequest at 'http://85.238.112.40:8810/hls_sec/239.33.16.32-.m3u8' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:8080/index.html:0
+[    1314ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://85.238.112.40:8810/hls_sec/239.33.16.32-.m3u8:0

@@ -1,0 +1,136 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary "Main navigation" [ref=e3]:
+      - link "A1TV Home" [ref=e4] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e5]: A1TV
+        - text: Premium
+      - navigation "Site sections" [ref=e6]:
+        - button "Live TV" [ref=e7] [cursor=pointer]:
+          - img [ref=e8]
+        - button "Search channels" [ref=e11] [cursor=pointer]:
+          - img [ref=e12]
+        - button "Sports channels" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+        - button "Movies" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+        - button "Favorite channels" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+        - button "Settings" [ref=e23] [cursor=pointer]:
+          - img [ref=e24]
+      - generic "Profile" [ref=e27]: 👤
+    - main [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]: Live Sports
+          - generic [ref=e32]: 12 LIVE
+        - generic [ref=e33]:
+          - generic [ref=e34]: Network Secure
+          - text: 21:53:15
+          - button "Share" [ref=e35] [cursor=pointer]:
+            - img [ref=e36]
+          - button "Help" [ref=e38] [cursor=pointer]:
+            - img [ref=e39]
+          - button "Settings" [ref=e41] [cursor=pointer]:
+            - img [ref=e42]
+      - region "Featured video player" [ref=e44]:
+        - generic [ref=e45]: ⚽
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: Live
+              - text: 4K UHD
+              - generic [ref=e50]:
+                - img [ref=e51]
+                - text: 124.8K
+            - generic [ref=e53]:
+              - button "Add to favorites" [ref=e54] [cursor=pointer]:
+                - img [ref=e55]
+              - button "Share channel" [ref=e57] [cursor=pointer]:
+                - img [ref=e58]
+              - button "Toggle fullscreen" [ref=e60] [cursor=pointer]:
+                - img [ref=e61]
+          - generic [ref=e63]:
+            - generic [ref=e64]:
+              - generic [ref=e65]: Now Showing
+              - heading "UEFA Champions League — Real Madrid vs. Bayern Munich" [level=1] [ref=e66]
+              - paragraph [ref=e67]: Quarter Finals · Live Match Coverage
+            - generic [ref=e68]:
+              - generic [ref=e69]: 🏟️ Real Madrid
+              - text: 2 – 1 LIVE 62'
+              - generic [ref=e70]: Bayern Munich ⚡
+            - generic [ref=e71]:
+              - generic [ref=e72]:
+                - text: 21:00
+                - progressbar
+                - text: 23:00
+              - generic [ref=e73]:
+                - button "Skip backward" [ref=e74] [cursor=pointer]:
+                  - img [ref=e75]
+                - button "Play/Pause (Space)" [ref=e77] [cursor=pointer]:
+                  - img [ref=e78]
+                  - text: Pause
+                - button "Skip forward" [ref=e80] [cursor=pointer]:
+                  - img [ref=e81]
+                - generic [ref=e83]:
+                  - button "Mute/Unmute" [ref=e84] [cursor=pointer]:
+                    - img [ref=e85]
+                  - slider "Volume" [ref=e87]: "0.75"
+                - button "PiP" [ref=e88] [cursor=pointer]:
+                  - img [ref=e89]
+                - button "Fullscreen" [ref=e91] [cursor=pointer]:
+                  - img [ref=e92]
+      - generic [ref=e95]: More Channels See all →
+      - navigation "Programme schedule" [ref=e96]
+    - complementary "Channel browser" [ref=e97]:
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - heading "Channels" [level=2] [ref=e100]
+          - text: 340+ CH
+        - search [ref=e101]:
+          - img [ref=e102]
+          - searchbox "Search channels" [ref=e104]
+          - text: /
+        - tablist "Channel categories"
+      - list "Available channels" [ref=e105]:
+        - generic [ref=e106]:
+          - generic [ref=e107]: 📡
+          - paragraph [ref=e108]: Loading live channels...
+          - paragraph [ref=e109]: Fetching from iptv-org/iptv API
+      - generic [ref=e110]: © 2025 A1TV Premium IPTV Help
+  - dialog "Settings" [ref=e111]:
+    - generic [ref=e112]:
+      - generic [ref=e113]:
+        - heading "Settings" [level=2] [ref=e114]
+        - button "Close settings" [ref=e115] [cursor=pointer]:
+          - img [ref=e116]
+      - generic [ref=e118]:
+        - generic [ref=e119]: Stream Quality
+        - generic [ref=e120]:
+          - button "Auto" [ref=e121] [cursor=pointer]
+          - button "4K UHD" [ref=e122] [cursor=pointer]
+          - button "1080p HD" [ref=e123] [cursor=pointer]
+          - button "720p" [ref=e124] [cursor=pointer]
+          - button "480p" [ref=e125] [cursor=pointer]
+      - generic [ref=e126]:
+        - generic [ref=e127]: Audio Language
+        - generic [ref=e128]:
+          - button "English" [ref=e129] [cursor=pointer]
+          - button "Arabic" [ref=e130] [cursor=pointer]
+          - button "Spanish" [ref=e131] [cursor=pointer]
+          - button "French" [ref=e132] [cursor=pointer]
+      - generic [ref=e133]:
+        - generic [ref=e134]: Subtitles
+        - generic [ref=e135]:
+          - button "Off" [ref=e136] [cursor=pointer]
+          - button "English" [ref=e137] [cursor=pointer]
+          - button "Arabic" [ref=e138] [cursor=pointer]
+      - generic [ref=e139]:
+        - generic [ref=e140]: Keyboard Shortcuts
+        - generic [ref=e141]:
+          - generic [ref=e142]: Play / PauseSpace
+          - generic [ref=e143]: MuteM
+          - generic [ref=e144]: FullscreenF
+          - generic [ref=e145]: Search/
+          - generic [ref=e146]: Skip Forward→
+          - generic [ref=e147]: Skip Back←
