@@ -1,0 +1,60 @@
+# A1TV v2 — Prometheus Alert Rules
+groups:
+  - name: a1tv_streams
+    rules:
+      - alert: HighOfflineRate
+        expr: sum(a1tv_active_streams{status="offline"}) / sum(a1tv_active_streams) * 100 > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High stream offline rate"
+          description: "{{ $value | printf \"%.1f\" }}% of streams are offline"
+
+      - alert: CriticalOfflineRate
+        expr: sum(a1tv_active_streams{status="offline"}) / sum(a1tv_active_streams) * 100 > 50
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical stream offline rate"
+          description: "{{ $value | printf \"%.1f\" }}% of streams are offline"
+
+  - name: a1tv_api
+    rules:
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(a1tv_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "p95 latency is {{ $value | printf \"%.2f\" }}s"
+
+      - alert: HighErrorRate
+        expr: rate(a1tv_http_request_duration_seconds_count{status_code=~"5.."}[5m]) / rate(a1tv_http_request_duration_seconds_count[5m]) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate"
+          description: "{{ $value | printf \"%.1f\" }}% of requests are 5xx"
+
+  - name: a1tv_system
+    rules:
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job="a1tv-api"} > 500000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "API process using {{ $value | humanize1024 }}B"
+
+      - alert: WebSocketNoClients
+        expr: a1tv_websocket_clients == 0
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "No WebSocket clients connected"

@@ -1,41 +1,57 @@
 // ============================================================
-// A1TV Backend — Express Server
+// A1TV v2 — Express Server (Production)
+// API versioning (/api/v1/*), WebSocket, rate limiting,
+// security headers, all routes wired.
 // ============================================================
 
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const config = require('./config');
 const cache = require('./services/cache');
+const rateLimiter = require('./services/rateLimiter');
+const wsService = require('./services/websocket');
+const { router: metricsRouter, httpRequestDuration } = require('./routes/metrics');
 
 // Import routes
 const channelsRouter = require('./routes/channels');
 const searchRouter = require('./routes/index');
+const proxyRouter = require('./routes/proxy');
 
 const app = express();
+const server = http.createServer(app);
 
 // ============================================================
-// Middleware
+// Global Middleware
 // ============================================================
 
 app.use(helmet({
-    contentSecurityPolicy: false, // Allow HLS.js CDN
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
 }));
 
 app.use(cors({
     origin: config.server.corsOrigins,
     methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'X-Session-Id'],
 }));
 
 app.use(compression());
 app.use(express.json({ limit: '10kb' }));
 
 // Attach cache to requests
+app.use((req, res, next) => { req.cache = cache; next(); });
+
+// Prometheus HTTP duration tracking
 app.use((req, res, next) => {
-    req.cache = cache;
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = (Date.now() - start) / 1000;
+        const route = req.route?.path || req.path;
+        httpRequestDuration.observe({ method: req.method, route, status_code: res.statusCode }, duration);
+    });
     next();
 });
 
@@ -44,50 +60,113 @@ if (config.server.env === 'development') {
     app.use((req, res, next) => {
         const start = Date.now();
         res.on('finish', () => {
-            const elapsed = Date.now() - start;
-            console.log(`${req.method} ${req.path} ${res.statusCode} ${elapsed}ms`);
+            console.log(`${req.method} ${req.path} ${res.statusCode} ${Date.now() - start}ms`);
         });
         next();
     });
 }
 
 // ============================================================
-// Routes
+// Health Check (unversioned)
 // ============================================================
 
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', version: '2.0.0', timestamp: new Date().toISOString() });
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        version: '2.0.0',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        websocket: wsService.getConnectedCount(),
+    });
 });
 
-app.use('/api/channels', channelsRouter);
-app.use('/api/search', searchRouter);
-app.use('/api/categories', searchRouter);
-app.use('/api/countries', searchRouter);
-app.use('/api/epg', searchRouter);
-app.use('/api/analytics', searchRouter);
+// ============================================================
+// API v1 Routes
+// ============================================================
 
-// 404 handler
+const v1 = express.Router();
+
+// Rate limiting per endpoint type
+v1.use('/channels/*/stream', rateLimiter.middleware({ windowSeconds: 60, maxRequests: 10, keyGenerator: req => req.ip }));
+v1.use('/search', rateLimiter.middleware({ windowSeconds: 60, maxRequests: 20, keyGenerator: req => req.ip }));
+v1.use('/auth', rateLimiter.middleware({ windowSeconds: 900, maxRequests: 10, keyGenerator: req => req.ip }));
+v1.use(rateLimiter.middleware({ windowSeconds: 60, maxRequests: 100, keyGenerator: req => req.ip }));
+
+// Channels
+v1.use('/channels', channelsRouter);
+
+// Search
+v1.use('/search', searchRouter);
+
+// Categories & Countries
+v1.use('/categories', searchRouter);
+v1.use('/countries', searchRouter);
+
+// EPG
+v1.use('/epg', searchRouter);
+
+// Analytics
+v1.use('/analytics', searchRouter);
+
+// Stream proxy
+v1.use('/proxy', proxyRouter);
+
+// Mount v1 router
+app.use('/api/v1', v1);
+
+// Prometheus metrics (unversioned, for scraping)
+app.use('/metrics', metricsRouter);
+
+// Legacy /api/ redirect to /api/v1/
+app.use('/api/channels', (req, res) => res.redirect(301, '/api/v1' + req.path));
+app.use('/api/search', (req, res) => res.redirect(301, '/api/v1' + req.path));
+app.use('/api/categories', (req, res) => res.redirect(301, '/api/v1' + req.path));
+
+// ============================================================
+// WebSocket Initialization
+// ============================================================
+
+wsService.init(server, config.server.corsOrigins);
+
+// ============================================================
+// Error Handlers
+// ============================================================
+
 app.use((req, res) => {
-    res.status(404).json({ success: false, error: 'Not found' });
+    res.status(404).json({ success: false, error: 'Not found', path: req.path });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err.message);
     res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
 // ============================================================
+// Graceful Shutdown
+// ============================================================
+
+function shutdown() {
+    console.log('Shutting down server...');
+    server.close(async () => {
+        await cache.quit();
+        process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10000);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+// ============================================================
 // Start Server
 // ============================================================
 
 async function start() {
-    // Connect to Redis
     await cache.connect();
 
-    // Start HTTP server
-    app.listen(config.server.port, config.server.host, () => {
-        console.log(`A1TV API Server running on http://${config.server.host}:${config.server.port}`);
+    server.listen(config.server.port, config.server.host, () => {
+        console.log(`A1TV API v2 running on http://${config.server.host}:${config.server.port}`);
+        console.log(`WebSocket: ws://${config.server.host}:${config.server.port}`);
         console.log(`Environment: ${config.server.env}`);
     });
 }
@@ -97,4 +176,4 @@ start().catch(err => {
     process.exit(1);
 });
 
-module.exports = app;
+module.exports = { app, server };
