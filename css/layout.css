@@ -1,0 +1,339 @@
+/* ============================================================
+   FIFA E1 SportsTV Design System — Layout
+   ============================================================ */
+
+/* ── App Shell ────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  position: relative;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* ── Content Zone (left) ──────────────────────────────────── */
+.content-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.content-inner {
+  flex: 1;
+  padding: var(--space-6) var(--space-8) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  overflow-y: auto;
+}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-subtle);
+  background: rgba(4, 7, 17, 0.4);
+  height: calc(100vh - var(--nav-height));
+  position: sticky;
+  top: var(--nav-height);
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.sidebar-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Player Section ───────────────────────────────────────── */
+.player-section {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-ink);
+  position: relative;
+}
+
+/* ── Show Info Section ────────────────────────────────────── */
+.show-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.show-info-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.show-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ── Channel Count Badge Row ──────────────────────────────── */
+.channel-count-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Grid layouts ─────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.stat-card {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.stat-card:hover {
+  background: var(--surface-elevated);
+  border-color: var(--border-soft);
+}
+.stat-card .stat-label {
+  font-family: var(--font-primary);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--color-warm-gray);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.stat-card .stat-value {
+  font-family: var(--font-primary);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--color-white);
+  line-height: 1;
+}
+.stat-card .stat-value.cyan { color: var(--color-cyan); }
+.stat-card .stat-sub {
+  font-family: var(--font-secondary);
+  font-size: 11px;
+  color: var(--color-warm-gray);
+}
+
+/* ── Next Up Panel ────────────────────────────────────────── */
+.next-up-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+.next-up-panel:hover { border-color: var(--border-soft); }
+.next-up-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-warm-gray);
+  flex-shrink: 0;
+}
+.next-up-info { flex: 1; min-width: 0; }
+
+/* ── Hamburger ────────────────────────────────────────────── */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  flex-shrink: 0;
+}
+.hamburger-btn:hover {
+  background: var(--surface-elevated);
+  border-color: var(--color-cyan);
+}
+.hamburger-line {
+  width: 16px;
+  height: 2px;
+  background: var(--color-warm-gray);
+  border-radius: 2px;
+  transition: background var(--transition-fast);
+}
+.hamburger-btn:hover .hamburger-line { background: var(--color-off-white); }
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+═══════════════════════════════════════════════════════════ */
+
+/* ── Tablet (768px–1439px) ────────────────────────────────── */
+@media (max-width: 1439px) {
+  .sidebar {
+    width: 320px;
+  }
+  .content-inner {
+    padding: var(--space-5) var(--space-6) var(--space-4);
+  }
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .nav-link { display: none; }
+  .stream-count-badge { display: none; }
+}
+
+/* ── Tablet smaller ────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .sidebar {
+    width: 280px;
+  }
+}
+
+/* ── Mobile (< 768px) ─────────────────────────────────────── */
+@media (max-width: 767px) {
+  :root {
+    --nav-height: 56px;
+    --sidebar-width: 100%;
+  }
+
+  .nav-bar {
+    padding: 0 var(--space-4);
+    height: 56px;
+  }
+  .nav-status  { display: none; }
+  .nav-divider { display: none; }
+  .nav-center  { display: none; }
+  .nav-time    {
+    font-size: 12px;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .nav-actions .btn-secondary:not(:last-child):not(:nth-last-child(2)) {
+    display: none;
+  }
+
+  .hamburger-btn { display: flex; }
+
+  /* Hide desktop sidebar */
+  .sidebar {
+    display: none;
+  }
+
+  .app-main {
+    flex-direction: column;
+  }
+  .content-zone {
+    width: 100%;
+  }
+  .content-inner {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .show-info-grid {
+    grid-template-columns: 1fr;
+  }
+  .show-actions {
+    flex-wrap: wrap;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+  }
+  .stat-card { padding: var(--space-3); }
+  .stat-card .stat-value { font-size: 16px; }
+
+  .player-title {
+    font-size: clamp(14px, 5vw, 22px);
+    max-width: 100%;
+  }
+  .player-description { display: none; }
+
+  .footer {
+    padding: var(--space-4);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .footer-links { flex-wrap: wrap; gap: var(--space-3); }
+
+  /* Mobile volume hidden */
+  .player-volume-group { display: none; }
+
+  /* Scale down player buttons on mobile */
+  .player-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .player-btn.play-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .player-buttons-row {
+    gap: var(--space-1);
+  }
+  .player-overlay {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  .btn-primary {
+    padding: 12px var(--space-6);
+    font-size: 16px;
+  }
+}
+
+/* ── Very small (< 420px) ─────────────────────────────────── */
+@media (max-width: 419px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stats-grid .stat-card:last-child {
+    grid-column: span 2;
+  }
+}
