@@ -1,359 +1,345 @@
 /* ============================================================
    FIFA E1 SportsTV — Channels Module
+   Works with IPTV API data (data.js)
    ============================================================ */
 
 const Channels = (() => {
-  let activeChannelId      = null;
-  let activeCategory       = 'All';
-  let searchQuery          = '';
-  let viewerSimulationTick = null;
+  let activeChannelId = null;
+  let activeCategory  = 'All';
+  let searchQuery     = '';
 
+  /* ── Initialize ────────────────────────────────────────── */
   function init() {
-    renderCategoryTabs();
     renderChannelList();
-    setupSearch();
+    setupCategoryTabs();
   }
 
-  /* ── Category Tabs ──────────────────────────────────────── */
-
-  function renderCategoryTabs() {
-    const container = document.getElementById('rp-cats');
-    if (!container) return;
-
-    container.innerHTML = CATEGORIES.map(cat => `
-      <button class="cat-pill ${cat === activeCategory ? 'active' : ''}"
-              data-cat="${cat}" role="tab" aria-selected="${cat === activeCategory}">
-        ${cat}
-      </button>
-    `).join('');
-
-    container.querySelectorAll('.cat-pill').forEach(btn => {
-      btn.addEventListener('click', () => {
-        activeCategory = btn.dataset.cat;
-        renderCategoryTabs();
-        renderChannelList();
-      });
-    });
-  }
-
-  /* ── Search ─────────────────────────────────────────────── */
-
-  function setupSearch() {
-    const searchEl = document.getElementById('search-input');
-    if (searchEl) {
-      searchEl.addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        renderChannelList();
-      });
-      searchEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          searchEl.value = '';
-          searchQuery = '';
-          renderChannelList();
-          searchEl.blur();
-        }
-      });
-    }
-  }
-
-  /* ── Channel List Rendering ─────────────────────────────── */
+  /* ── Rendering ─────────────────────────────────────────── */
 
   function renderChannelList() {
-    const container = document.getElementById('rp-list');
+    const container = document.getElementById('channel-list');
     if (!container) return;
 
     const filtered = filterChannels(activeCategory, searchQuery);
 
-    if (!filtered.length) {
+    if (filtered.length === 0) {
       container.innerHTML = `
         <div class="no-results">
           <div class="nr-icon">📡</div>
-          No channels found.<br>
-          <small style="font-size:11px;font-weight:400;">Try a different search or category.</small>
-        </div>`;
+          <p>No channels found</p>
+          <p style="font-size:11px; margin-top:4px; opacity:0.7;">
+            ${CHANNELS.length === 0 ? 'Loading channels from API...' : 'Try a different search or category'}
+          </p>
+        </div>`      ;
       return;
     }
 
-    container.innerHTML = filtered.map((ch, i) => renderChannelCard(ch, i)).join('');
+    container.innerHTML = filtered.map(ch => renderChannelCard(ch)).join('');
 
-    container.querySelectorAll('.ch-card').forEach(card => {
+    // Bind events
+    container.querySelectorAll('.channel-card').forEach(card => {
       card.addEventListener('click', (e) => {
-        if (e.target.closest('.ch-fav-btn')) return;
-        selectChannel(card.dataset.id);
-      });
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          selectChannel(card.dataset.id);
-        }
+        if (e.target.closest('.channel-favorite-btn') || e.target.closest('.ch-fav-btn')) return;
+        selectChannel(card.dataset.channelId);
       });
     });
 
-    container.querySelectorAll('.ch-fav-btn').forEach(btn => {
+    container.querySelectorAll('.channel-favorite-btn, .ch-fav-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleFavorite(btn.dataset.id);
+        toggleFavorite(btn.dataset.channelId);
       });
     });
   }
 
-  function renderChannelCard(ch, index) {
-    const isActive = ch.id === activeChannelId;
-    const favIcon  = ch.isFavorite
-      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-         </svg>`
-      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-           <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-         </svg>`;
+  function renderChannelCard(ch) {
+    const isActive   = ch.id === activeChannelId;
+    const favIcon    = ch.isFavorite || ch._isFavorite
+      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`
+      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`;
 
-    const showTitle = ch.currentShow
-      ? ch.currentShow.title
-      : 'Loading…';
+    // Use logo URL if available, otherwise emoji
+    const logoHTML = ch.logo && ch.logo.startsWith('http')
+      ? `<img src="${ch.logo}" alt="${ch.name}" style="width:28px;height:28px;object-fit:contain;border-radius:4px;" onerror="this.style.display='none';this.nextElement.style.display='flex'"><span style="font-size:18px;display:none;">${getCategoryEmoji(ch.category)}</span>`
+      : `<span style="font-size:18px;">${typeof ch.logo === 'string' && ch.logo.length <= 4 ? ch.logo : getCategoryEmoji(ch.category)}</span>`;
 
     return `
-      <div class="ch-card ${isActive ? 'active' : ''}"
-           data-id="${ch.id}" role="listitem" tabindex="0"
-           aria-label="Watch ${ch.name}"
-           aria-selected="${isActive}"
-           style="animation-delay:${index * 0.02}s">
-        <div class="ch-logo">
-          <div class="ch-logo-inner" style="background:${ch.color}22;">
-            <span style="font-size:19px;">${ch.logo || '📺'}</span>
+      <div class="channel-card ${isActive ? 'active' : ''}" data-channel-id="${ch.id}"
+           role="button" tabindex="0" aria-label="Watch ${ch.name}">
+        <div class="channel-logo">
+          <div class="channel-logo-inner" style="background: ${ch.color}22;">
+            ${logoHTML}
           </div>
         </div>
-        <div class="ch-info">
-          <div class="ch-name">${ch.name}</div>
-          <div class="ch-show">${showTitle}</div>
-          <div class="ch-prog-bar">
-            <div class="ch-prog-fill" style="width:${ch.currentShow ? ch.currentShow.progress : 0}%"></div>
-          </div>
+        <div class="channel-info">
+          <div class="channel-name">${ch.name}</div>
+          <div class="channel-show">${ch.currentShow?.title || ch.name}</div>
         </div>
-        <div class="ch-meta">
-          <span class="ch-num">CH ${ch.number || ch.id.slice(-3)}</span>
-          ${ch.isLive ? '<div class="ch-live-dot" title="Live"></div>' : ''}
+        <div class="channel-meta">
+          <span class="channel-number">CH ${ch.number}</span>
+          ${ch.isLive ? '<div class="channel-live-dot" title="Live"></div>' : ''}
         </div>
-        <button class="ch-fav-btn ${ch.isFavorite ? 'fav' : ''}"
-                data-id="${ch.id}"
-                title="${ch.isFavorite ? 'Remove favorite' : 'Add to favorites'}"
-                aria-label="${ch.isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+        <button class="channel-favorite-btn ${ch.isFavorite || ch._isFavorite ? 'favorited' : ''}"
+                data-channel-id="${ch.id}"
+                aria-label="${ch.isFavorite || ch._isFavorite ? 'Remove from favorites' : 'Add to favorites'}"
+                title="${ch.isFavorite || ch._isFavorite ? 'Remove favorite' : 'Add to favorites'}">
           ${favIcon}
         </button>
+        <div class="channel-progress-bar">
+          <div class="channel-progress-fill" style="width: ${ch.currentShow?.progress || 0}%"></div>
+        </div>
       </div>`;
   }
 
-  /* ── Channel Selection ──────────────────────────────────── */
-
-  function selectChannel(id) {
-    const ch = getChannelById(id);
-    if (!ch) return;
-
-    activeChannelId = ch.id;
-    renderChannelList();
-
-    updateHeroUI(ch);
-    updateShowInfo(ch);
-
-    Player.loadChannel(ch);
-    Player.showToast(`📺 ${ch.name}`, 'ok');
-
-    scrollToActive();
+  function getCategoryEmoji(categories) {
+    const emojiMap = {
+      sports: '⚽', news: '📰', entertainment: '🎭', movies: '🎬',
+      music: '🎵', documentary: '🎥', business: '💼', lifestyle: '🌿',
+      family: '👨‍👩‍👧‍👦', general: '📺', kids: '🧸', animation: '🎨',
+    };
+    if (categories && categories.length > 0) {
+      for (const cat of categories) {
+        if (emojiMap[cat]) return emojiMap[cat];
+      }
+    }
+    return '📺';
   }
 
-  function updateHeroUI(ch) {
-    setEl('hero-art', ch.logo || '📺');
-    const glow = document.getElementById('hero-glow');
-    if (glow) {
-      glow.style.background =
-        `radial-gradient(ellipse at center, ${ch.color}55 0%, ${ch.color}18 45%, transparent 75%)`;
-    }
+  /* ── Category Tabs ─────────────────────────────────────── */
 
-    const titleEl = document.getElementById('hero-title');
-    if (titleEl) {
-      titleEl.style.opacity   = '0';
-      titleEl.style.transform = 'translateY(8px)';
-      setTimeout(() => {
-        titleEl.textContent    = ch.currentShow?.title || ch.name;
-        titleEl.style.transition = 'all 0.3s ease';
-        titleEl.style.opacity  = '1';
-        titleEl.style.transform = 'translateY(0)';
-      }, 100);
-    }
-    setEl('hero-subtitle', ch.currentShow?.subtitle || '');
+  function setupCategoryTabs() {
+    const tabContainer = document.getElementById('category-tabs');
+    if (!tabContainer) return;
 
-    setEl('hero-quality', ch.quality || 'HD');
-
-    const viewersEl = document.getElementById('hero-viewers');
-    if (viewersEl) {
-      viewersEl.innerHTML = `
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
-          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34-3-3-3-3z"/>
-        </svg>
-        ${ch.viewers || '--'}`;
-    }
-
-    const liveBadge = document.getElementById('hero-badges');
-    if (liveBadge) {
-      const badgeLive = liveBadge.querySelector('.badge-live');
-      if (badgeLive) badgeLive.style.display = ch.isLive ? 'flex' : 'none';
-    }
-
-    if (ch.currentShow) {
-      const fill = document.getElementById('hero-prog-fill');
-      if (fill) fill.style.width = ch.currentShow.progress + '%';
-      setEl('hero-time-start', ch.currentShow.startTime || '--:--');
-      setEl('hero-time-end',   ch.currentShow.endTime   || '--:--');
-    }
-
-    const liveCountEl = document.getElementById('live-count');
-    if (liveCountEl) {
-      const count = window.CHANNELS.filter(c => c.isLive).length;
-      liveCountEl.textContent = `${count} LIVE`;
-    }
-
-    renderCardRow(ch);
-    renderScheduleBar(ch);
-  }
-
-  function renderCardRow(activeCh) {
-    const container = document.getElementById('cards-row');
-    if (!container) return;
-
-    const others = window.CHANNELS.filter(c => c.id !== activeCh.id).slice(0, 4);
-    container.innerHTML = others.map(ch => `
-      <div class="video-card" data-id="${ch.id}" tabindex="0" role="button"
-           aria-label="Switch to ${ch.name}">
-        <div class="vc-bg" style="color:${ch.color};">${ch.logo || '📺'}</div>
-        <div class="vc-top-badges">
-          ${ch.isLive ? '<span class="vc-live-badge">Live</span>' : ''}
-          <span class="vc-cat-badge">${ch.category ? ch.category[0] : 'Other'}</span>
-        </div>
-        <div class="vc-overlay">
-          <div class="vc-ch-name">${ch.name}</div>
-          <div class="vc-show-name">${ch.currentShow?.title || 'Loading…'}</div>
-          <div class="vc-prog-bar">
-            <div class="vc-prog-fill" style="width:${ch.currentShow ? ch.currentShow.progress : 0}%"></div>
-          </div>
-        </div>
-        <div class="vc-play-overlay">
-          <div class="vc-play-circle">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-        </div>
-      </div>
+    tabContainer.innerHTML = CATEGORIES.map(cat => `
+      <button class="tab-item ${cat === activeCategory ? 'active' : ''}"
+              data-category="${cat}"
+              aria-pressed="${cat === activeCategory}">
+        ${cat}
+      </button>
     `).join('');
 
-    container.querySelectorAll('.video-card').forEach(card => {
-      card.addEventListener('click', () => selectChannel(card.dataset.id));
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') selectChannel(card.dataset.id);
+    tabContainer.querySelectorAll('.tab-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCategory = btn.dataset.category;
+        tabContainer.querySelectorAll('.tab-item').forEach(b => {
+          b.classList.toggle('active', b.dataset.category === activeCategory);
+          b.setAttribute('aria-pressed', b.dataset.category === activeCategory);
+        });
+        renderChannelList();
+        scrollToActive();
       });
     });
   }
 
-  function renderScheduleBar(ch) {
+  /* ── Search ────────────────────────────────────────────── */
+
+  function onSearch(query) {
+    searchQuery = query;
+    renderChannelList();
+  }
+
+  /* ── Channel Selection ─────────────────────────────────── */
+
+  function selectChannel(id) {
+    const channel = getChannelById(id);
+    if (!channel) return;
+
+    activeChannelId = id;
+    renderChannelList();
+    updatePlayerUI(channel);
+    updateShowInfo(channel);
+    updateScheduleBar(channel);
+
+    // Load into player (real stream)
+    Player.loadChannel(channel);
+    Player.showToast(`📺 Switched to ${channel.name}`, 'success');
+
+    // On mobile, close drawer
+    const drawer = document.getElementById('sidebar-drawer');
+    if (drawer && drawer.classList.contains('open')) {
+      Nav.closeMobileDrawer();
+    }
+  }
+
+  /* ── Favorites ─────────────────────────────────────────── */
+
+  function toggleFavorite(id) {
+    const channel = toggleFavoriteById(id);
+    if (!channel) return;
+    renderChannelList();
+    Player.showToast(
+      channel._isFavorite ? `★ Added ${channel.name} to favorites` : `☆ Removed from favorites`,
+      'success'
+    );
+  }
+
+  /* ── Player UI Update ──────────────────────────────────── */
+
+  function updatePlayerUI(channel) {
+    // Channel art / emoji
+    const art    = document.getElementById('player-channel-art') || document.getElementById('hero-art');
+    const artBg  = document.getElementById('player-art-bg') || document.getElementById('hero-glow');
+    const artColor = channel.color || '#08101F';
+
+    if (art) {
+      const emojiEl = art.querySelector('.player-art-emoji') || art;
+      if (emojiEl) emojiEl.textContent = typeof channel.logo === 'string' && channel.logo.length <= 4 ? channel.logo : getCategoryEmoji(channel.category);
+      art.style.color = artColor;
+    }
+    if (artBg) {
+      artBg.style.background = `radial-gradient(circle at center, ${artColor}66 0%, ${artColor}11 60%, transparent 100%)`;
+    }
+
+    // Badges
+    setEl('player-live-badge', channel.isLive
+      ? `<div class="live-badge">Live</div>` : '');
+    setEl('player-quality-badge',
+      `<span class="quality-badge">${channel.streamQuality || channel.quality || 'HD'}</span>`);
+    setEl('player-viewers-badge',
+      `<span class="viewers-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
+          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+        </svg>
+        ${channel.viewers || '1K'}
+      </span>`);
+
+    setEl('player-channel-name', channel.name);
+
+    // Title
+    const titleEl = document.getElementById('player-title') || document.getElementById('hero-title');
+    if (titleEl) {
+      titleEl.textContent = channel.currentShow?.title || channel.name;
+      titleEl.classList.remove('player-switch');
+      void titleEl.offsetWidth; // reflow
+      titleEl.classList.add('player-switch');
+    }
+
+    const subtitleEl = document.getElementById('player-subtitle') || document.getElementById('hero-subtitle');
+    if (subtitleEl) {
+      subtitleEl.textContent = channel.currentShow?.subtitle || `${channel.countryName} · Live`;
+    }
+
+    const descEl = document.getElementById('player-description');
+    if (descEl) {
+      descEl.textContent = channel.currentShow?.description || '';
+    }
+
+    // Progress
+    const progFill = document.getElementById('player-progress-fill') || document.getElementById('hero-prog-fill');
+    if (progFill) {
+      progFill.style.width = (channel.currentShow?.progress || 0) + '%';
+    }
+    const timeEl = document.getElementById('player-current-time') || document.getElementById('hero-time-start');
+    if (timeEl && channel.currentShow) {
+      timeEl.textContent = `${channel.currentShow.startTime} – ${channel.currentShow.endTime}`;
+    }
+
+    // Update hero badges
+    const heroQuality = document.getElementById('hero-quality');
+    if (heroQuality) heroQuality.textContent = channel.streamQuality || channel.quality || 'HD';
+
+    const heroViewers = document.getElementById('hero-viewers');
+    if (heroViewers) {
+      heroViewers.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" opacity="0.7"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        ${channel.viewers || '1K'}
+      `;
+    }
+  }
+
+  function updateShowInfo(channel) {
+    setEl('show-title',       channel.currentShow?.title || channel.name);
+    setEl('show-subtitle',    channel.currentShow?.subtitle || `${channel.countryName} · Live`);
+    setEl('show-description', channel.currentShow?.description || '');
+    setEl('show-channel-name', channel.name);
+    setEl('show-time-range',
+      channel.currentShow ? `${channel.currentShow.startTime} – ${channel.currentShow.endTime}` : '');
+    setEl('next-show-title',
+      channel.nextShow?.title || 'No schedule available');
+    setEl('next-show-time',
+      channel.nextShow ? `${channel.nextShow.startTime} – ${channel.nextShow.endTime}` : '');
+    setEl('stat-viewers', channel.viewers || '1K');
+    setEl('stat-quality', channel.streamQuality || channel.quality || 'HD');
+    setEl('stat-channel', `CH ${channel.number}`);
+
+    const liveIndicator = document.getElementById('show-live-indicator');
+    if (liveIndicator) {
+      liveIndicator.style.display = channel.isLive ? 'flex' : 'none';
+    }
+  }
+
+  function updateScheduleBar(channel) {
     const bar = document.getElementById('schedule-bar');
     if (!bar) return;
 
-    const items = [
-      {
-        time:    ch.currentShow?.startTime || '--:--',
-        title:   ch.currentShow?.title    || 'Loading…',
-        current: true
-      },
-      {
-        time:    ch.nextShow?.startTime   || '--:--',
-        title:   ch.nextShow?.title       || 'Up Next',
-        current: false
-      }
-    ];
+    const shows = [];
+    const now = new Date();
+    const currentShow = channel.currentShow;
 
-    bar.innerHTML = items.map(s => `
-      <div class="sch-item ${s.current ? 'sch-current' : ''}">
-        <span class="sch-time">${s.time}</span>
-        <span class="sch-show">${s.title}</span>
-        ${s.current ? '<span class="sch-tag">Now Showing</span>' : ''}
+    if (currentShow) {
+      // Previous show
+      shows.push({
+        time: formatTime(new Date(now - 2 * 60 * 60 * 1000)),
+        title: 'Previous Program',
+        current: false,
+      });
+      // Current show
+      shows.push({
+        time: currentShow.startTime,
+        title: currentShow.title,
+        current: true,
+      });
+      // Next show
+      if (channel.nextShow) {
+        shows.push({
+          time: channel.nextShow.startTime,
+          title: channel.nextShow.title,
+          current: false,
+        });
+        shows.push({
+          time: formatTime(new Date(now + 4 * 60 * 60 * 1000)),
+          title: 'Up Next',
+          current: false,
+        });
+      }
+    }
+
+    bar.innerHTML = shows.map(s => `
+      <div class="schedule-item ${s.current ? 'current' : ''}">
+        <span class="schedule-time">${s.time}</span>
+        <span class="schedule-show">${s.title}</span>
+        ${s.current ? '<span class="sch-tag">NOW SHOWING</span>' : ''}
       </div>
     `).join('');
   }
 
-  function updateShowInfo(ch) {
-    setEl('show-title',       ch.currentShow?.title       || ch.name);
-    setEl('show-subtitle',    ch.currentShow?.subtitle    || '');
-    setEl('show-description', ch.currentShow?.description || '');
-    setEl('show-channel-name',ch.name);
-    setEl('show-time-range',
-      `${ch.currentShow?.startTime || '--:--'} – ${ch.currentShow?.endTime || '--:--'}`);
-    setEl('next-show-title',  ch.nextShow?.title          || '');
-    setEl('next-show-time',
-      ch.nextShow
-        ? `${ch.nextShow.startTime} – ${ch.nextShow.endTime}`
-        : '');
-    setEl('stat-viewers', ch.viewers || '--');
-    setEl('stat-quality', ch.quality || 'HD');
-    setEl('stat-channel', `CH ${ch.number || ch.id.slice(-3)}`);
+  function formatTime(date) {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+  }
 
-    const liveIndicator = document.getElementById('show-live-indicator');
-    if (liveIndicator) {
-      liveIndicator.style.display = ch.isLive ? 'flex' : 'none';
+  /* ── Helpers ───────────────────────────────────────────── */
+
+  function setEl(id, html) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+      el.value = html;
+    } else {
+      const isText = !html.includes('<');
+      if (isText) el.textContent = html;
+      else el.innerHTML = html;
     }
   }
 
-  /* ── Favorites ──────────────────────────────────────────── */
-
-  function toggleFavorite(id) {
-    const ch = window.CHANNELS.find(c => c.id === id);
-    if (!ch) return;
-    ch.isFavorite = !ch.isFavorite;
-    renderChannelList();
-    Player.showToast(
-      ch.isFavorite ? `★ Added ${ch.name} to favorites` : `☆ Removed ${ch.name}`,
-      'ok'
-    );
-  }
-
-  /* ── Helpers ────────────────────────────────────────────── */
-
-  function setEl(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const isText = typeof value === 'string' && !value.includes('<');
-    isText ? el.textContent = value : el.innerHTML = value;
-  }
-
   function scrollToActive() {
-    const card = document.querySelector('.ch-card.active');
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const activeCard = document.querySelector('.channel-card.active');
+    if (activeCard) {
+      activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
-  function simulateViewerFluctuation() {
-    clearInterval(viewerSimulationTick);
-    viewerSimulationTick = setInterval(() => {
-      const ch = getChannelById(activeChannelId);
-      if (!ch || ch.viewers === '--') return;
-      const base  = parseFloat(ch.viewers.replace('K','')) * 1000;
-      const delta = Math.floor((Math.random() - 0.5) * 300);
-      const val   = Math.max(0, base + delta);
-      const disp  = val >= 1000 ? (val/1000).toFixed(1)+'K' : String(val);
-      ch.viewers  = disp;
-
-      const viewersEl = document.getElementById('hero-viewers');
-      if (viewersEl) viewersEl.innerHTML = `
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
-          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34-3-3-3-3-3z"/>
-        </svg>
-        ${disp}`;
-    }, 7000);
-  }
-
-  return {
-    init,
-    onSearch:     (q) => { searchQuery = q; renderChannelList(); },
-    selectChannel,
-    scrollToActive,
-    renderCategoryTabs,
-    renderChannelList,
-    simulateViewerFluctuation,
-    getActiveId: () => activeChannelId
-  };
+  return { init, onSearch, selectChannel, scrollToActive };
 })();

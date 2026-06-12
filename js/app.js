@@ -1,61 +1,70 @@
 /* ============================================================
    FIFA E1 SportsTV — App Entry Point
+   Loads real IPTV channels from iptv-org/iptv API
+   https://github.com/iptv-org/iptv
    ============================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
-  showLoadingState();
+document.addEventListener('DOMContentLoaded', async () => {
 
-  Data.init()
-    .then(() => {
-      hideLoadingState();
-      Player.init();
-      Nav.init();
-      Channels.init();
-      Channels.simulateViewerFluctuation();
-    })
-    .catch((err) => {
-      console.error('Failed to initialize app:', err);
-      hideLoadingState();
-      Player.init();
-      Nav.init();
-      Channels.init();
-      Channels.simulateViewerFluctuation();
-    });
+  /* ── Show loading state ────────────────────────────────── */
+  const container = document.getElementById('channel-list');
+  if (container) {
+    container.innerHTML = `
+      <div class="no-results" style="padding:60px 16px;">
+        <div style="font-size:48px;margin-bottom:16px;animation:pulse 1.5s ease infinite;">📡</div>
+        <p>Loading live channels...</p>
+        <p style="font-size:11px;margin-top:8px;opacity:0.7;">Fetching from iptv-org/iptv API</p>
+      </div>`;
+  }
 
-  console.log('%c A1TV LiveTV ', 'background:#00F2FE; color:#040711; font-weight:900; font-size:14px; padding:4px 8px; border-radius:4px;');
-  console.log('%c Powered by iptv-org — 10,000+ free channels ', 'color:#8292B0; font-size:11px;');
+  /* ── Load IPTV API data ───────────────────────────────── */
+  try {
+    await initChannelData();
+  } catch (err) {
+    console.error('Failed to load IPTV data:', err);
+  }
+
+  /* ── Get default channel ──────────────────────────────── */
+  const defaultChannel = CHANNELS && CHANNELS.length > 0 ? CHANNELS[0] : null;
+
+  /* ── Initialize modules ────────────────────────────────── */
+  Player.init();
+  Nav.init();
+  Channels.init();
+
+  /* ── Load initial channel ──────────────────────────────── */
+  if (defaultChannel) {
+    Channels.selectChannel(defaultChannel.id);
+    setTimeout(() => Channels.scrollToActive(), 100);
+  }
+
+  /* ── Viewer count animation ────────────────────────────── */
+  simulateViewerCount();
+
+  /* ── Page visibility: pause on hide ────────────────────── */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Optionally pause when tab is hidden
+    }
+  });
+
+  console.log('%c FIFA E1 SportsTV ', 'background:#00F2FE; color:#040711; font-weight:900; font-size:14px; padding:4px 8px; border-radius:4px;');
+  console.log(`%c ${CHANNELS.length} Live Channels • Powered by iptv-org/iptv `, 'color:#8292B0; font-size:11px;');
 });
 
-/* ── Loading / skeleton UI ────────────────────────────────── */
-
-function showLoadingState() {
-  const hero = document.getElementById('hero-player');
-  if (hero) hero.classList.add('loading-pending');
-
-  const rpList = document.getElementById('rp-list');
-  if (rpList) {
-    rpList.innerHTML = Array.from({ length: 8 }, () => `
-      <div class="ch-card skeleton-card">
-        <div class="ch-logo"><div class="skeleton" style="width:36px;height:36px;border-radius:var(--radius-xs);"></div></div>
-        <div class="ch-info">
-          <div class="skeleton" style="width:120px;height:12px;border-radius:4px;margin-bottom:6px;"></div>
-          <div class="skeleton" style="width:80px;height:10px;border-radius:4px;"></div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  const cardsRow = document.getElementById('cards-row');
-  if (cardsRow) {
-    cardsRow.innerHTML = Array.from({ length: 4 }, () => `
-      <div class="video-card skeleton-card" style="pointer-events:none;">
-        <div class="skeleton" style="aspect-ratio:16/10;"></div>
-      </div>
-    `).join('');
-  }
-}
-
-function hideLoadingState() {
-  const hero = document.getElementById('hero-player');
-  if (hero) hero.classList.remove('loading-pending');
+/* ── Viewer count simulation ────────────────────────────── */
+function simulateViewerCount() {
+  setInterval(() => {
+    const viewerEl = document.getElementById('stat-viewers');
+    if (!viewerEl || !CHANNELS || CHANNELS.length === 0) return;
+    const ch = CHANNELS.find(c => c.id === (window._activeChannelId || ''));
+    if (!ch) return;
+    const base = parseFloat(ch.viewers) * 1000;
+    if (isNaN(base)) return;
+    const delta = Math.floor((Math.random() - 0.5) * 200);
+    const newVal = Math.max(0, base + delta);
+    viewerEl.textContent = newVal >= 1000
+      ? (newVal / 1000).toFixed(1) + 'K'
+      : String(newVal);
+  }, 8000);
 }
