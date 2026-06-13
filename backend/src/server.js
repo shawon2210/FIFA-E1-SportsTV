@@ -6,6 +6,7 @@
 
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -30,8 +31,12 @@ const gatewayRouter = require('./routes/gateway');
 const streamIntelRouter = require('./routes/streamIntel');
 const recV2Router = require('./routes/recommendationsV2');
 const sportsRouter = require('./routes/sports');
+const billingRouter = require('./routes/billing');
+const whiteLabelRouter = require('./routes/whiteLabel');
+const enterpriseRouter = require('./routes/enterprise');
 const { traceMiddleware } = require('./services/tracing');
 const { startHealthMonitor } = require('./services/gateway/healthMonitor');
+const { setupTelemetry } = require('./services/otel');
 const { securityMonitor, auditService, auditTableSQL, securityTableSQL } = require('./services/security');
 
 const app = express();
@@ -172,6 +177,15 @@ v1.use('/recommendations/v2', recV2Router);
 // Sports Intelligence (matches, timeline, sports hub)
 v1.use('/sports', sportsRouter);
 
+// Subscription & Billing
+v1.use('/billing', billingRouter);
+
+// White Label SaaS (themes, domains, branding, analytics)
+v1.use('/whitelabel', whiteLabelRouter);
+
+// Enterprise Security (SSO, SCIM, GDPR, Compliance)
+v1.use('/enterprise', enterpriseRouter);
+
 // Admin (requires auth + admin role)
 v1.use('/admin', adminRouter);
 
@@ -233,6 +247,9 @@ async function start() {
 
     // Start gateway health monitor
     startHealthMonitor();
+
+    // Initialize OpenTelemetry
+    setupTelemetry();
 
     server.listen(config.server.port, config.server.host, () => {
         console.log(`A1TV API v2 running on http://${config.server.host}:${config.server.port}`);

@@ -25,12 +25,12 @@ const db = knex({
     },
 });
 
-// Health check
+// Health check — don't crash if DB is down (graceful degradation)
 db.raw('SELECT 1')
     .then(() => console.log('✓ PostgreSQL connected'))
     .catch(err => {
         console.error('✗ PostgreSQL connection failed:', err.message);
-        process.exit(1);
+        console.warn('  Server will start without database. Retry on first request.');
     });
 
 module.exports = db;

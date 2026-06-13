@@ -6,7 +6,7 @@
 
 const axios = require('axios');
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('../services/cache');
 const config = require('../config');
 
 class EdgeCacheService {

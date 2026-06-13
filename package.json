@@ -1,0 +1,29 @@
+{
+    "name": "a1tv",
+    "version": "3.0.0",
+    "description": "A1TV FIFA E1SportsTV - Premium IPTV Platform",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js",
+        "backend": "node backend/src/server.js",
+        "backend:dev": "nodemon backend/src/server.js",
+        "workers": "node backend/src/workers/index.js",
+        "db:migrate": "node backend/src/scripts/run-migrations.js up",
+        "db:seed": "node backend/src/scripts/run-migrations.js seed",
+        "db:rollback": "node backend/src/scripts/run-migrations.js down",
+        "db:reset": "node backend/src/scripts/run-migrations.js reset",
+        "test": "node tests/run-integration-tests.js",
+        "test:api": "node tests/run-integration-tests.js",
+        "lint": "echo 'No linter configured'",
+        "setup": "node scripts/setup-env.js",
+        "docker:up": "cd docker && docker compose up -d",
+        "docker:down": "cd docker && docker compose down",
+        "install:all": "npm install && cd backend && npm install"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "bcryptjs": "^3.0.3"
+    }
+}

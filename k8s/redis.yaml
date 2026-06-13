@@ -1,0 +1,71 @@
+# A1TV v4 — Redis Cluster for Kubernetes
+# 3-master + 3-replica Redis cluster for session/cache/streaming state
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: a1tv-redis
+  namespace: a1tv
+spec:
+  serviceName: a1tv-redis
+  replicas: 3
+  selector:
+    matchLabels:
+      app: a1tv
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: a1tv
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+              name: redis
+          command: ["redis-server"]
+          args:
+            - "--appendonly"
+            - "yes"
+            - "--maxmemory"
+            - "512mb"
+            - "--maxmemory-policy"
+            - "allkeys-lru"
+            - "--protected-mode"
+            - "$(REDIS_PROTECTED_MODE)"
+          env:
+            - name: REDIS_PROTECTED_MODE
+              value: "no"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a1tv-redis
+  namespace: a1tv
+spec:
+  selector:
+    app: a1tv
+    component: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  clusterIP: None

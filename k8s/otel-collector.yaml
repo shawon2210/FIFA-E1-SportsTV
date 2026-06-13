@@ -1,0 +1,170 @@
+# ============================================================
+# A1TV v4 — OpenTelemetry Collector Configuration
+# Collects traces, metrics, and logs from all services.
+#
+# Architecture:
+#   API / Workers / Redis / Postgres / Stream Proxy
+#         ↓ (OTLP)
+#   OpenTelemetry Collector
+#         ↓
+#   Jaeger (traces) + Prometheus (metrics) + Loki (logs)
+# ============================================================
+
+# ── OpenTelemetry Collector Config ──────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: a1tv
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: "a1tv-api"
+              scrape_interval: 15s
+              static_configs:
+                - targets: ["a1tv-api:3000"]
+            - job_name: "a1tv-workers"
+              scrape_interval: 30s
+              static_configs:
+                - targets: ["a1tv-workers:3000"]
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 512
+        spike_limit_mib: 128
+      resource:
+        attributes:
+          - key: service.namespace
+            value: a1tv
+            action: upsert
+          - key: deployment.environment
+            value: production
+            action: upsert
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 100000
+        expected_new_traces_per_sec: 1000
+        policies:
+          - name: errors
+            type: status_code
+            status_code: {status_codes: [ERROR]}
+          - name: slow_requests
+            type: latency
+            latency: {threshold_ms: 500}
+          - name: probabilistic
+            type: probabilistic
+            probabilistic: {sampling_percentage: 10}
+
+    exporters:
+      jaeger:
+        endpoint: jaeger-collector:14250
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        namespace: a1tv
+      loki:
+        endpoint: http://loki:3100/loki/api/v1/push
+      logging:
+        loglevel: warn
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+
+    service:
+      extensions: [health_check, pprof]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, tail_sampling, batch]
+          exporters: [jaeger, logging]
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [memory_limiter, resource, batch]
+          exporters: [prometheus, logging]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [loki, logging]
+
+---
+# ── OpenTelemetry Collector Deployment ──────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: a1tv
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.96.0
+          args: ["--config", "/conf/otel-collector-config.yaml"]
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 8889
+              name: prometheus
+            - containerPort: 13133
+              name: health
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+
+---
+# ── OpenTelemetry Collector Service ─────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: a1tv-otel-collector
+  namespace: a1tv
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+    - port: 4318
+      targetPort: 4318
+      name: otlp-http
+    - port: 8889
+      targetPort: 8889
+      name: prometheus

@@ -4,7 +4,7 @@
 
 const { Router } = require('express');
 const db = require('../config/database');
-const cache = require('../config').cache;
+const cache = require('../services/cache');
 const healthChecker = require('../services/healthChecker');
 const streamScorer = require('../services/streamScorer');
 

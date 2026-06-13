@@ -2,7 +2,7 @@
 // Edge nodes, geo-routing, regional failover
 
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('../services/cache');
 
 class CDNLayers {
     constructor() {

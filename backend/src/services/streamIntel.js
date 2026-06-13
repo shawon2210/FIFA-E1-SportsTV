@@ -2,7 +2,7 @@
 // Stream Reliability Prediction, Auto Stream Ranking, Trust Scores
 
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('../services/cache');
 
 class StreamingIntelligence {
     /**

@@ -2,7 +2,7 @@
 // Smart search, natural language EPG queries, channel classification, personalized home
 
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('../services/cache');
 
 class AILayer {
     /**

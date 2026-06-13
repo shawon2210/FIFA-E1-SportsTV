@@ -46,7 +46,7 @@ class RecommendationEngine {
      */
     async getTrending(period = '24h', limit = 20) {
         const cacheKey = 'rec:trending:' + period + ':' + limit;
-        const cached = await require('../config/services/cache').get(cacheKey);
+        const cached = await require('../services/cache').get(cacheKey);
         if (cached) return cached;
 
         // Get top channels by views
@@ -69,7 +69,7 @@ class RecommendationEngine {
         scored.sort((a, b) => b.score - a.score);
         const result = scored.slice(0, limit);
 
-        await require('../config/services/cache').set(cacheKey, result, 300);
+        await require('../services/cache').set(cacheKey, result, 300);
         return result;
     }
 
@@ -78,7 +78,7 @@ class RecommendationEngine {
      */
     async getSimilar(channelId, limit = 10) {
         const cacheKey = 'rec:similar:' + channelId + ':' + limit;
-        const cached = await require('../config/services/cache').get(cacheKey);
+        const cached = await require('../services/cache').get(cacheKey);
         if (cached) return cached;
 
         const channel = await db('channels').where('id', channelId).first();
@@ -114,7 +114,7 @@ class RecommendationEngine {
         }
 
         const result = similar.slice(0, limit);
-        await require('../config/services/cache').set(cacheKey, result, 600);
+        await require('../services/cache').set(cacheKey, result, 600);
         return result;
     }
 
@@ -123,7 +123,7 @@ class RecommendationEngine {
      */
     async getPersonalized(userId, limit = 20) {
         const cacheKey = 'rec:personal:' + userId + ':' + limit;
-        const cached = await require('../config/services/cache').get(cacheKey);
+        const cached = await require('../services/cache').get(cacheKey);
         if (cached) return cached;
 
         // Get user's watch history categories
@@ -169,7 +169,7 @@ class RecommendationEngine {
             recommendations = [...recommendations, ...additional];
         }
 
-        await require('../config/services/cache').set(cacheKey, recommendations, 300);
+        await require('../services/cache').set(cacheKey, recommendations, 300);
         return recommendations;
     }
 

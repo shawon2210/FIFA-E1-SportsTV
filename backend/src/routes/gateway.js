@@ -17,7 +17,7 @@ const {
   REGIONS,
   originHealth,
   checkGeoRestriction,
-} = require('./index');
+} = require('../services/gateway/index');
 
 const router = Router();
 

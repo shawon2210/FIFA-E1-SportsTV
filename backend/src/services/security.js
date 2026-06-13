@@ -99,8 +99,8 @@ class SecurityMonitor {
      */
     async trackFailedAuth(identifier, ip) {
         const key = 'auth_fail:' + ip;
-        const attempts = await require('../config/services/cache').get(key) || 0;
-        await require('../config/services/cache').set(key, attempts + 1, 900); // 15 min window
+        const attempts = await require('../services/cache').get(key) || 0;
+        await require('../services/cache').set(key, attempts + 1, 900); // 15 min window
 
         if (attempts >= 10) {
             await db('security_events').insert({

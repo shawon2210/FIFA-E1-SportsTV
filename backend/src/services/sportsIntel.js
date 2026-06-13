@@ -10,7 +10,7 @@
 // ============================================================
 
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('./cache');
 
 // ── Sports keyword dictionaries ─────────────────────────────
 const SPORTS_KEYWORDS = {

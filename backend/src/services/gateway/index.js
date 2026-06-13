@@ -13,9 +13,9 @@
 //   Backend API / Stream Proxy
 // ============================================================
 
-const db = require('../config/database');
-const cache = require('../config/services/cache');
-const config = require('../config');
+const db = require('../../config/database');
+const cache = require('../cache');
+const config = require('../../config');
 
 // ── Region Configuration ────────────────────────────────────
 const REGIONS = {

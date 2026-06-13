@@ -1,0 +1,14 @@
+# A1TV v4 — Redis Service for Kubernetes
+apiVersion: v1
+kind: Service
+metadata:
+  name: a1tv-redis
+  namespace: a1tv
+spec:
+  selector:
+    app: a1tv
+    component: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  clusterIP: None

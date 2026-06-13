@@ -1,0 +1,421 @@
+# ============================================================
+# A1TV v4 — Kubernetes Manifests
+# Production-grade K8s deployment with HPA, ingress,
+# Redis Cluster, PostgreSQL HA.
+#
+# Usage:
+#   kubectl apply -f k8s/
+# ============================================================
+
+---
+# ── Namespace ───────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: a1tv
+  labels:
+    app: a1tv
+    environment: production
+
+---
+# ── ConfigMap ───────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: a1tv-config
+  namespace: a1tv
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  HOST: "0.0.0.0"
+  API_URL: "https://api.a1tv.com"
+  FRONTEND_URL: "https://a1tv.com"
+  DB_HOST: "a1tv-postgres"
+  DB_PORT: "5432"
+  DB_NAME: "a1tv"
+  DB_POOL_MIN: "5"
+  DB_POOL_MAX: "20"
+  REDIS_HOST: "a1tv-redis"
+  REDIS_PORT: "6379"
+  CORS_ORIGINS: "https://a1tv.com,https://admin.a1tv.com"
+  LOG_LEVEL: "info"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://a1tv-otel-collector:4317"
+  OTEL_SERVICE_NAME: "a1tv-api"
+
+---
+# ── Secret (template — replace with actual values) ──────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: a1tv-secrets
+  namespace: a1tv
+type: Opaque
+stringData:
+  DB_USER: "a1tv"
+  DB_PASSWORD: "CHANGE_ME"
+  REDIS_PASSWORD: "CHANGE_ME"
+  JWT_SECRET: "CHANGE_ME"
+  STREAM_SIGNING_SECRET: "CHANGE_ME"
+  STREAM_TOKEN_SECRET: "CHANGE_ME"
+  STRIPE_SECRET_KEY: ""
+  STRIPE_WEBHOOK_SECRET: ""
+  PADDLE_VENDOR_ID: ""
+  PADDLE_API_KEY: ""
+
+---
+# ── API Deployment ──────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a1tv-api
+  namespace: a1tv
+  labels:
+    app: a1tv
+    component: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: a1tv
+      component: api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: a1tv
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: a1tv/api:latest
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: a1tv-config
+            - secretRef:
+                name: a1tv-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"]
+
+---
+# ── API Service ─────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: a1tv-api
+  namespace: a1tv
+spec:
+  selector:
+    app: a1tv
+    component: api
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http
+  type: ClusterIP
+
+---
+# ── Horizontal Pod Autoscaler ───────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a1tv-api-hpa
+  namespace: a1tv
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a1tv-api
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: websocket_connections
+        target:
+          type: AverageValue
+          averageValue: "1000"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 4
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 120
+
+---
+# ── Background Workers Deployment ───────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a1tv-workers
+  namespace: a1tv
+  labels:
+    app: a1tv
+    component: workers
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: a1tv
+      component: workers
+  template:
+    metadata:
+      labels:
+        app: a1tv
+        component: workers
+    spec:
+      containers:
+        - name: workers
+          image: a1tv/api:latest
+          command: ["npm", "run", "workers"]
+          envFrom:
+            - configMapRef:
+                name: a1tv-config
+            - secretRef:
+                name: a1tv-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+
+---
+# ── Worker HPA ──────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: a1tv-workers-hpa
+  namespace: a1tv
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: a1tv-workers
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+
+---
+# ── Nginx Frontend Deployment ───────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a1tv-nginx
+  namespace: a1tv
+  labels:
+    app: a1tv
+    component: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: a1tv
+      component: nginx
+  template:
+    metadata:
+      labels:
+        app: a1tv
+        component: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: a1tv/frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+---
+# ── Nginx Service ───────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: a1tv-nginx
+  namespace: a1tv
+spec:
+  selector:
+    app: a1tv
+    component: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+# ── Ingress ─────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: a1tv-ingress
+  namespace: a1tv
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, X-Device-Id, X-Session-Id"
+spec:
+  tls:
+    - hosts:
+        - a1tv.com
+        - api.a1tv.com
+        - admin.a1tv.com
+      secretName: a1tv-tls
+  rules:
+    - host: a1tv.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: a1tv-nginx
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: a1tv-api
+                port:
+                  number: 3000
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: a1tv-api
+                port:
+                  number: 3000
+    - host: api.a1tv.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: a1tv-api
+                port:
+                  number: 3000
+    - host: admin.a1tv.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: a1tv-nginx
+                port:
+                  number: 80
+
+---
+# ── Network Policy ──────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: a1tv-network-policy
+  namespace: a1tv
+spec:
+  podSelector:
+    matchLabels:
+      app: a1tv
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              app: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 80
+    - from:
+        - podSelector:
+            matchLabels:
+              app: a1tv
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: a1tv
+    - to: []  # Allow DNS, external APIs
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443

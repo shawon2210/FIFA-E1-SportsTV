@@ -12,7 +12,7 @@
 // ============================================================
 
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('../cache');
 const crypto = require('crypto');
 
 // ── Payment Provider Interface ───────────────────────────────

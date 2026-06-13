@@ -1,0 +1,92 @@
+# A1TV v4 — OpenTelemetry Collector ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: a1tv
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: "a1tv-api"
+              scrape_interval: 15s
+              static_configs:
+                - targets: ["a1tv-api:3000"]
+            - job_name: "a1tv-workers"
+              scrape_interval: 30s
+              static_configs:
+                - targets: ["a1tv-workers:3000"]
+
+    processors:
+      batch:
+        timeout: 5s
+        send_batch_size: 1024
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 512
+        spike_limit_mib: 128
+      resource:
+        attributes:
+          - key: service.namespace
+            value: a1tv
+            action: upsert
+          - key: deployment.environment
+            value: production
+            action: upsert
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 100000
+        expected_new_traces_per_sec: 1000
+        policies:
+          - name: errors
+            type: status_code
+            status_code: {status_codes: [ERROR]}
+          - name: slow_requests
+            type: latency
+            latency: {threshold_ms: 500}
+          - name: probabilistic
+            type: probabilistic
+            probabilistic: {sampling_percentage: 10}
+
+    exporters:
+      jaeger:
+        endpoint: jaeger-collector:14250
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        namespace: a1tv
+      loki:
+        endpoint: http://loki:3100/loki/api/v1/push
+      logging:
+        loglevel: warn
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+
+    service:
+      extensions: [health_check, pprof]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, tail_sampling, batch]
+          exporters: [jaeger, logging]
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [memory_limiter, resource, batch]
+          exporters: [prometheus, logging]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [loki, logging]

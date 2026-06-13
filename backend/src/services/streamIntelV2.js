@@ -15,7 +15,7 @@
 // ============================================================
 
 const db = require('../config/database');
-const cache = require('../config/services/cache');
+const cache = require('./cache');
 
 // ── Feature Weights (trained from historical patterns) ──────
 const FEATURE_WEIGHTS = {
