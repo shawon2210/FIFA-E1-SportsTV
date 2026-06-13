@@ -26,7 +26,12 @@ const accountsRouter = require('./routes/accounts');
 const streamRouter = require('./routes/stream');
 const epgIntelRouter = require('./routes/epg-intel');
 const orgRouter = require('./routes/organizations');
+const gatewayRouter = require('./routes/gateway');
+const streamIntelRouter = require('./routes/streamIntel');
+const recV2Router = require('./routes/recommendationsV2');
+const sportsRouter = require('./routes/sports');
 const { traceMiddleware } = require('./services/tracing');
+const { startHealthMonitor } = require('./services/gateway/healthMonitor');
 const { securityMonitor, auditService, auditTableSQL, securityTableSQL } = require('./services/security');
 
 const app = express();
@@ -155,6 +160,18 @@ v1.use('/organizations', orgRouter);
 // AI Layer (smart search, personalized home)
 v1.use('/ai', require('./routes/ai'));
 
+// Stream Gateway (regional routing, edge affinity, origin selection)
+v1.use('/gateway', gatewayRouter);
+
+// Predictive Stream Intelligence v2
+v1.use('/intelligence', streamIntelRouter);
+
+// Recommendation Engine v2 (embedding-based)
+v1.use('/recommendations/v2', recV2Router);
+
+// Sports Intelligence (matches, timeline, sports hub)
+v1.use('/sports', sportsRouter);
+
 // Admin (requires auth + admin role)
 v1.use('/admin', adminRouter);
 
@@ -213,6 +230,9 @@ process.on('SIGINT', shutdown);
 
 async function start() {
     await cache.connect();
+
+    // Start gateway health monitor
+    startHealthMonitor();
 
     server.listen(config.server.port, config.server.host, () => {
         console.log(`A1TV API v2 running on http://${config.server.host}:${config.server.port}`);
