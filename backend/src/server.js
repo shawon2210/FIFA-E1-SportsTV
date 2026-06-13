@@ -1,3 +1,4 @@
+console.log('SERVER.JS TOP-LEVEL START');
 // ============================================================
 // A1TV v2 — Express Server (Production)
 // API versioning (/api/v1/*), WebSocket, rate limiting,
@@ -63,8 +64,9 @@ app.use(express.json({ limit: '10kb' }));
 // Attach cache to requests
 app.use((req, res, next) => { req.cache = cache; next(); });
 
-// Distributed tracing
-app.use(traceMiddleware);
+// Distributed tracing — TEMPORARILY DISABLED FOR DEBUGGING
+// app.use(traceMiddleware);
+app.use((req, res, next) => next());
 
 // Security: bot detection + input sanitization
 app.use((req, res, next) => {
@@ -118,11 +120,11 @@ app.get('/health', (req, res) => {
 
 const v1 = express.Router();
 
-// Rate limiting per endpoint type
-v1.use('/channels/*/stream', rateLimiter.middleware({ windowSeconds: 60, maxRequests: 10, keyGenerator: req => req.ip }));
-v1.use('/search', rateLimiter.middleware({ windowSeconds: 60, maxRequests: 20, keyGenerator: req => req.ip }));
-v1.use('/auth', rateLimiter.middleware({ windowSeconds: 900, maxRequests: 10, keyGenerator: req => req.ip }));
-v1.use(rateLimiter.middleware({ windowSeconds: 60, maxRequests: 100, keyGenerator: req => req.ip }));
+// Rate limiting per endpoint type — TEMPORARILY DISABLED FOR DEBUGGING
+// v1.use('/channels/*/stream', rateLimiter.middleware({ windowSeconds: 60, maxRequests: 10, keyGenerator: req => req.ip }));
+// v1.use('/search', rateLimiter.middleware({ windowSeconds: 60, maxRequests: 20, keyGenerator: req => req.ip }));
+// v1.use('/auth', rateLimiter.middleware({ windowSeconds: 900, maxRequests: 10, keyGenerator: req => req.ip }));
+// v1.use(rateLimiter.middleware({ windowSeconds: 60, maxRequests: 100, keyGenerator: req => req.ip }));
 
 // Channels
 v1.use('/channels', channelsRouter);

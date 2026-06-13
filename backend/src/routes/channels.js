@@ -11,50 +11,21 @@ const { standardLimiter, validate, optionalAuth, authenticate, requireDevice, tr
 const router = Router();
 
 // ── GET /api/channels ─────────────────────────────────────
-router.get('/', standardLimiter, optionalAuth, [
-    query('category').optional().isString().trim().isLength({ max: 50 }),
-    query('country').optional().isString().trim().isLength({ max: 2 }),
-    query('featured').optional().isBoolean(),
-    query('verified').optional().isBoolean(),
-    query('search').optional().isString().trim().isLength({ max: 100 }),
-    query('page').optional().isInt({ min: 1 }).toInt(),
-    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('sort').optional().isIn(['popular', 'name', 'recent', 'favorites']),
-    validate,
-], async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const { category, country, featured, verified, search, page = 1, limit = 50, sort = 'popular' } = req.query;
         const offset = (page - 1) * limit;
-        const cacheKey = `ch:${category || 'all'}:${country || 'all'}:${featured || 'f'}:${verified || 'f'}:${search || ''}:${page}:${limit}:${sort}`;
-
-        const result = await req.cache.getOrSet(cacheKey, cache.ttl.channels, async () => {
-            let q = db('v_channels_enriched');
-            if (category && category !== 'all') q = q.where('category_slug', category.toLowerCase());
-            if (country && country !== 'all') q = q.where('country_code', country.toUpperCase());
-            if (featured === 'true') q = q.where('is_featured', true);
-            if (verified === 'true') q = q.where('is_verified', true);
-            if (search) {
-                const s = `%${search.toLowerCase()}%`;
-                q = q.where(function () {
-                    this.whereRaw('name ILIKE ?', [s]).orWhereRaw('country_name ILIKE ?', [s]);
-                });
-            }
-            switch (sort) {
-                case 'name': q = q.orderBy('name', 'asc'); break;
-                case 'recent': q = q.orderBy('last_synced_at', 'desc'); break;
-                case 'favorites': q = q.orderBy('favorite_count', 'desc'); break;
-                default: q = q.orderBy('view_count', 'desc');
-            }
-            const { count } = await q.clone().count('* as count').first();
-            const channels = await q.offset(offset).limit(limit);
-            return { data: channels, pagination: { page, limit, total: parseInt(count), pages: Math.ceil(parseInt(count) / limit) } };
-        });
-
-        res.json({ success: true, ...result });
-    } catch (err) {
-        console.error('GET /channels:', err.message);
-        res.status(500).json({ success: false, error: 'Failed to fetch channels' });
-    }
+        let q = db('v_channels_enriched').where('is_active', true);
+        if (category && category !== 'all') q = q.where('category_slug', category.toLowerCase());
+        if (country && country !== 'all') q = q.where('country_code', country.toUpperCase());
+        if (featured === 'true') q = q.where('is_featured', true);
+        if (verified === 'true') q = q.where('is_verified', true);
+        if (search) { const s = `%${search.toLowerCase()}%`; q = q.where(function() { this.whereRaw('name ILIKE ?', [s]).orWhereRaw('country_name ILIKE ?', [s]); }); }
+        switch (sort) { case 'name': q = q.orderBy('name','asc'); break; case 'recent': q = q.orderBy('last_synced_at','desc'); break; case 'favorites': q = q.orderBy('favorite_count','desc'); break; default: q = q.orderBy('view_count','desc'); }
+        const { count } = await q.clone().clearOrder().count('* as count').first();
+        const channels = await q.offset(offset).limit(limit);
+        res.json({ success: true, data: channels, pagination: { page, limit, total: parseInt(count), pages: Math.ceil(parseInt(count) / limit) } });
+    } catch (err) { console.error('GET /channels:', err.message); res.status(500).json({ success: false, error: 'Failed to fetch channels' }); }
 });
 
 // ── GET /api/channels/featured ────────────────────────────
@@ -226,3 +197,14 @@ router.get('/search', standardLimiter, [
 });
 
 module.exports = router;
+
+// Simple test route - no middleware
+router.get('/test-simple', async (req, res) => {
+    try {
+        const db = require('../config/database');
+        const channels = await db('channels').where('is_active', true).limit(3);
+        res.json({ success: true, data: channels, count: channels.length });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});

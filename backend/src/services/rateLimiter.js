@@ -9,13 +9,21 @@ const config = require('../config');
 
 class RateLimiter {
     constructor() {
-        this.redis = new Redis({
-            host: config.redis.host,
-            port: config.redis.port,
-            password: config.redis.password,
-            db: config.redis.db,
-            keyPrefix: 'rl:',
-        });
+        this._redis = null;
+    }
+
+    getRedis() {
+        if (!this._redis) {
+            this._redis = new Redis({
+                host: config.redis.host,
+                port: config.redis.port,
+                password: config.redis.password,
+                db: config.redis.db,
+                keyPrefix: 'rl:',
+                lazyConnect: true,
+            });
+        }
+        return this._redis;
     }
 
     /**
@@ -28,7 +36,7 @@ class RateLimiter {
         const redisKey = `ratelimit:${key}`;
 
         try {
-            const pipeline = this.redis.pipeline();
+            const pipeline = this.getRedis().pipeline();
             pipeline.zremrangebyscore(redisKey, 0, windowStart); // Remove old entries
             pipeline.zadd(redisKey, now, `${now}-${Math.random()}`); // Add current request
             pipeline.zcard(redisKey); // Count requests in window
@@ -43,7 +51,7 @@ class RateLimiter {
 
             // If over limit, remove the request we just added
             if (!allowed) {
-                await this.redis.zremrangebyrank(redisKey, -1, -1);
+                await this.getRedis().zremrangebyrank(redisKey, -1, -1);
             }
 
             return { allowed, remaining, resetTime, limit: maxRequests };
@@ -103,7 +111,7 @@ class RateLimiter {
         const windowStart = now - (windowSeconds * 1000);
         const redisKey = `ratelimit:${key}`;
 
-        const count = await this.redis.zcount(redisKey, windowStart, now);
+        const count = await this.getRedis().zcount(redisKey, windowStart, now);
         return { count, windowSeconds };
     }
 
@@ -111,7 +119,7 @@ class RateLimiter {
      * Reset rate limit for a key.
      */
     async reset(key) {
-        await this.redis.del(`ratelimit:${key}`);
+        await this.getRedis().del(`ratelimit:${key}`);
     }
 }
 
