@@ -24,6 +24,10 @@ const epgRouter = require('./routes/epg');
 const recRouter = require('./routes/recommendations');
 const accountsRouter = require('./routes/accounts');
 const streamRouter = require('./routes/stream');
+const epgIntelRouter = require('./routes/epg-intel');
+const orgRouter = require('./routes/organizations');
+const { traceMiddleware } = require('./services/tracing');
+const { securityMonitor, auditService, auditTableSQL, securityTableSQL } = require('./services/security');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +52,19 @@ app.use(express.json({ limit: '10kb' }));
 
 // Attach cache to requests
 app.use((req, res, next) => { req.cache = cache; next(); });
+
+// Distributed tracing
+app.use(traceMiddleware);
+
+// Security: bot detection + input sanitization
+app.use((req, res, next) => {
+    const check = securityMonitor.checkRequest(req);
+    if (check.suspicious && check.severity === 'critical') {
+        auditService.log({ action: 'security:blocked', actor: { type: 'anonymous' }, target: { type: 'request', id: req.url }, details: check, ipAddress: req.ip, userAgent: req.headers['user-agent'] });
+        return res.status(403).json({ success: false, error: 'Request blocked' });
+    }
+    next();
+});
 
 // Prometheus HTTP duration tracking
 app.use((req, res, next) => {
@@ -122,12 +139,21 @@ v1.use('/epg', epgRouter);
 // Recommendations (personalized, trending, similar)
 v1.use('/recommendations', recRouter);
 
+// Stream Proxy
+v1.use('/stream', streamRouter);
+
+// EPG Intelligence (search, upcoming, reminders)
+v1.use('/epg', epgIntelRouter);
+
 // Auth & User Accounts
 v1.use('/auth', accountsRouter);
 v1.use('/users', accountsRouter);
 
-// Stream Proxy (smart routing, signed URLs, geo-aware)
-v1.use('/stream', streamRouter);
+// Organizations (multi-tenant)
+v1.use('/organizations', orgRouter);
+
+// AI Layer (smart search, personalized home)
+v1.use('/ai', require('./services/ai').router || (() => { const r = require('express').Router(); r.get('/search?q=', (req, res) => require('./services/ai').smartSearch(req.query.q).then(d => res.json({success:true,data:d}))); return r; })());
 
 // Admin (requires auth + admin role)
 v1.use('/admin', adminRouter);
@@ -137,6 +163,12 @@ app.use('/api/v1', v1);
 
 // Prometheus metrics (unversioned, for scraping)
 app.use('/metrics', metricsRouter);
+
+// Serve admin dashboard
+app.use('/admin', express.static(path.join(__dirname, '..', 'admin')));
+
+// Legacy /api/ redirect to /api/v1/
+app.use('/api/channels', (req, res) => res.redirect(301, '/api/v1' + req.path));
 
 // Legacy /api/ redirect to /api/v1/
 app.use('/api/channels', (req, res) => res.redirect(301, '/api/v1' + req.path));

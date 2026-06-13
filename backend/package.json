@@ -10,7 +10,10 @@
         "dev:workers": "nodemon src/workers/index.js",
         "sync": "node scripts/sync.js",
         "health-check": "node scripts/healthCheck.js",
-        "score": "node scripts/score.js"
+        "score": "node scripts/score.js",
+        "db:migrate": "knex migrate:latest --knexfile src/config/knexfile.js",
+        "db:seed": "knex seed:run --knexfile src/config/knexfile.js",
+        "db:reset": "knex migrate:rollback --all --knexfile src/config/knexfile.js && knex migrate:latest --knexfile src/config/knexfile.js && knex seed:run --knexfile src/config/knexfile.js"
     },
     "dependencies": {
         "axios": "^1.7.0",

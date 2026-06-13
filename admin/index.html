@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A1TV Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e17;--panel:#111827;--border:#1e293b;--text:#e2e8f0;--muted:#64748b;--accent:#3b82f6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--orange:#f97316}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);padding:20px 0;position:fixed;width:240px;height:100vh;overflow-y:auto}
+.logo{padding:0 20px 20px;font-size:18px;font-weight:700;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:10px}
+.logo span{color:var(--green)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(59,130,246,.05)}
+.nav-item.active{color:var(--accent);background:rgba(59,130,246,.1);border-left-color:var(--accent)}
+.nav-item .icon{width:16px;text-align:center}
+.main{margin-left:240px;padding:24px;overflow-y:auto;min-height:100vh}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.header h1{font-size:20px;font-weight:600}
+.header-right{display:flex;gap:12px;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500}
+.badge-green{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stat-card .value{font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.stat-card .sub{font-size:11px;color:var(--muted);margin-top:4px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.card-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}
+.card-header h2{font-size:14px;font-weight:600}
+.card-body{padding:16px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 12px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(59,130,246,.03)}
+.channel-name{display:flex;align-items:center;gap:8px}
+.channel-name .logo{width:24px;height:24px;border-radius:4px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px}
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.alert-item:last-child{border-bottom:none}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.alert-dot.critical{background:var(--red)}
+.alert-dot.warning{background:var(--yellow)}
+.alert-dot.info{background:var(--accent)}
+.alert-text{flex:1}
+.alert-text .title{font-size:13px;font-weight:500}
+.alert-text .time{font-size:11px;color:var(--muted);margin-top:2px}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:6px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.filter-btn:hover:not(.active){color:var(--text);border-color:var(--muted)}
+.refresh-btn{padding:6px 12px;border-radius:6px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px}
+.refresh-btn:hover{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="logo">A1<span>TV</span> Admin</div>
+<div class="nav-item active" onclick="showSection('dashboard')" data-section="dashboard"><span class="icon">&#128202;</span>Dashboard</div>
+<div class="nav-item" onclick="showSection('streams')" data-section="streams"><span class="icon">&#128225;</span>Streams</div>
+<div class="nav-item" onclick="showSection('channels')" data-section="channels"><span class="icon">&#128250;</span>Channels</div>
+<div class="nav-item" onclick="showSection('epg')" data-section="epg"><span class="icon">&#128203;</span>EPG</div>
+<div class="nav-item" onclick="showSection('search')" data-section="search"><span class="icon">&#128269;</span>Search Analytics</div>
+<div class="nav-item" onclick="showSection('alerts')" data-section="alerts"><span class="icon">&#128276;</span>Alerts</div>
+<div class="nav-item" onclick="showSection('recommendations')" data-section="recommendations"><span class="icon">&#10024;</span>Recommendations</div>
+</aside>
+<main class="main" id="main-content"></main>
+</div>
+<script>
+var API_BASE=window.location.port==='3000'?'':window.location.origin;
+var token=localStorage.getItem('a1tv_token');
+function apiFetch(path){var h={'Content-Type':'application/json'};if(token)h['Authorization']='Bearer '+token;return fetch(API_BASE+'/api/v1/admin'+path,{headers:h}).then(function(r){return r.json()}).catch(function(){return{success:false}})}
+function showSection(n){document.querySelectorAll('.nav-item').forEach(function(e){e.classList.toggle('active',e.dataset.section===n)});var m=document.getElementById('main-content');m.innerHTML='<div style="padding:40px;color:#64748b">Loading...</div>';if(n==='dashboard')loadDashboard(m);else if(n==='streams')loadStreams(m);else if(n==='channels')loadChannels(m);else if(n==='epg')loadEPG(m);else if(n==='search')loadSearch(m);else if(n==='alerts')loadAlerts(m);else if(n==='recommendations')loadRecs(m)}
+function loadDashboard(c){Promise.all([apiFetch('/dashboard'),apiFetch('/channels/top?period=24h&limit=10')]).then(function(r){var d=r[0].data||{},tc=r[1].data||{},s=d.streams||{},ch=d.channels||{},h=d.hosts||{},a=d.recentAlerts||[];var o='<div class="header"><h1>Dashboard</h1><div class="header-right"><span class="badge '+(s.online>s.offline?'badge-green':'badge-red')+'">'+(s.online||0)+' Online / '+(s.offline||0)+' Offline</span><button class="refresh-btn" onclick="showSection(\'dashboard\')">&#8635; Refresh</button></div></div>';o+='<div class="stats-grid">';o+='<div class="stat-card"><div class="label">Total Channels</div><div class="value">'+(ch.total||0)+'</div><div class="sub">'+(ch.active||0)+' active</div></div>';o+='<div class="stat-card"><div class="label">Active Streams</div><div class="value">'+(s.total||0)+'</div><div class="sub">'+((s.online/s.total*100)||0).toFixed(1)+'% online</div></div>';o+='<div class="stat-card"><div class="label">Stream Hosts</div><div class="value">'+(h.total||0)+'</div><div class="sub">'+(h.healthy||0)+' healthy / '+(h.down||0)+' down</div></div>';o+='<div class="stat-card"><div class="label">Active Alerts</div><div class="value">'+a.length+'</div></div></div>';o+='<div class="grid-2">';o+='<div class="card"><div class="card-header"><h2>Top Channels (24h)</h2></div><div class="card-body"><table><thead><tr><th>Channel</th><th>Views</th><th>Unique</th></tr></thead><tbody>';(tc.top||[]).forEach(function(ch){o+='<tr><td>'+ch.name+'</td><td>'+(ch.views||0)+'</td><td>'+(ch.unique_viewers||0)+'</td></tr>'});o+='</tbody></table></div></div>';o+='<div class="card"><div class="card-header"><h2>Recent Alerts</h2></div><div class="card-body">';a.forEach(function(al){o+='<div class="alert-item"><div class="alert-dot '+al.severity+'"></div><div class="alert-text"><div class="title">'+al.title+'</div><div class="time">'+new Date(al.created_at).toLocaleString()+'</div></div></div>'});o+='</div></div></div>';c.innerHTML=o})}
+function loadStreams(c){apiFetch('/streams/health').then(function(r){var d=r.data||{},s=d.stats||{},h=d.failingHosts||[],sl=d.slowStreams||[];var o='<div class="header"><h1>Stream Health</h1><button class="refresh-btn" onclick="showSection(\'streams\')">&#8635; Refresh</button></div>';o+='<div class="stats-grid">';o+='<div class="stat-card"><div class="label">Online</div><div class="value" style="color:#10b981">'+(s.online||0)+'</div></div>';o+='<div class="stat-card"><div class="label">Offline</div><div class="value" style="color:#ef4444">'+(s.offline||0)+'</div></div>';o+='<div class="stat-card"><div class="label">Geo-blocked</div><div class="value" style="color:#f59e0b">'+(s.geo_blocked||0)+'</div></div>';o+='<div class="stat-card"><div class="label">Avg Latency</div><div class="value">'+(s.avg_response_time||0)+'ms</div></div></div>';o+='<div class="grid-2">';o+='<div class="card"><div class="card-header"><h2>Failing Hosts</h2></div><div class="card-body"><table><thead><tr><th>Host</th><th>Failure Rate</th></tr></thead><tbody>';h.forEach(function(ht){o+='<tr><td>'+ht.host+'</td><td style="color:#ef4444">'+ht.failure_rate.toFixed(1)+'%</td></tr>'});o+='</tbody></table></div></div>';o+='<div class="card"><div class="card-header"><h2>Slow Streams</h2></div><div class="card-body"><table><thead><tr><th>URL</th><th>Latency</th></tr></thead><tbody>';sl.forEach(function(s){o+='<tr><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">'+(s.url||'').substring(0,50)+'...</td><td style="color:#f97316">'+s.response_time+'ms</td></tr>'});o+='</tbody></table></div></div></div>';c.innerHTML=o})}
+function loadChannels(c){apiFetch('/channels/top?period=24h&limit=50').then(function(r){var d=r.data||{};var o='<div class="header"><h1>Channels</h1><div class="header-right"><div class="filter-bar"><button class="filter-btn active" onclick="filterCh(this,\'24h\')">24h</button><button class="filter-btn" onclick="filterCh(this,\'7d\')">7d</button><button class="filter-btn" onclick="filterCh(this,\'30d\')">30d</button></div><button class="refresh-btn" onclick="showSection(\'channels\')">&#8635; Refresh</button></div></div>';o+='<div class="card"><div class="card-body"><table><thead><tr><th>#</th><th>Channel</th><th>Category</th><th>Views</th><th>Unique</th></tr></thead><tbody>';(d.top||[]).forEach(function(ch,i){o+='<tr><td>'+(i+1)+'</td><td>'+ch.name+'</td><td>'+(ch.category_name||'-')+'</td><td>'+(ch.views||0)+'</td><td>'+(ch.unique_viewers||0)+'</td></tr>'});o+='</tbody></table></div></div>';c.innerHTML=o})}
+function filterCh(btn,p){document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');apiFetch('/channels/top?period='+p+'&limit=50').then(function(r){var tb=document.querySelector('#main-content tbody');if(!tb)return;var d=r.data||{};tb.innerHTML='';(d.top||[]).forEach(function(ch,i){tb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+ch.name+'</td><td>'+(ch.category_name||'-')+'</td><td>'+(ch.views||0)+'</td><td>'+(ch.unique_viewers||0)+'</td></tr>'})})}
+function loadEPG(c){apiFetch('/epg/now').then(function(r){var p=r.data||[];var o='<div class="header"><h1>EPG - Now Playing</h1><button class="refresh-btn" onclick="showSection(\'epg\')">&#8635; Refresh</button></div>';o+='<div class="card"><div class="card-body"><table><thead><tr><th>Channel</th><th>Program</th><th>Start</th><th>End</th></tr></thead><tbody>';p.forEach(function(pr){o+='<tr><td>'+pr.channel_name+'</td><td><strong>'+pr.title+'</strong></td><td>'+new Date(pr.start_time).toLocaleTimeString()+'</td><td>'+new Date(pr.end_time).toLocaleTimeString()+'</td></tr>'});o+='</tbody></table></div></div>';c.innerHTML=o})}
+function loadSearch(c){apiFetch('/analytics/search?period=24h').then(function(r){var d=r.data||{};var o='<div class="header"><h1>Search Analytics</h1><button class="refresh-btn" onclick="showSection(\'search\')">&#8635; Refresh</button></div>';o+='<div class="grid-2">';o+='<div class="card"><div class="card-header"><h2>Top Searches</h2></div><div class="card-body"><table><thead><tr><th>Query</th><th>Count</th></tr></thead><tbody>';(d.topQueries||[]).forEach(function(q){o+='<tr><td><code>'+q.query+'</code></td><td>'+q.count+'</td></tr>'});o+='</tbody></table></div></div>';o+='<div class="card"><div class="card-header"><h2>No Results</h2></div><div class="card-body"><table><thead><tr><th>Query</th><th>Count</th></tr></thead><tbody>';(d.noResultQueries||[]).forEach(function(q){o+='<tr><td><code>'+q.query+'</code></td><td>'+q.count+'</td></tr>'});o+='</tbody></table></div></div></div>';c.innerHTML=o})}
+function loadAlerts(c){apiFetch('/alerts').then(function(r){var a=r.data||[];var o='<div class="header"><h1>Alerts</h1><button class="refresh-btn" onclick="showSection(\'alerts\')">&#8635; Refresh</button></div>';o+='<div class="card"><div class="card-body">';a.forEach(function(al){o+='<div class="alert-item"><div class="alert-dot '+al.severity+'"></div><div class="alert-text"><div class="title">'+al.title+'</div><div class="time">'+new Date(al.created_at).toLocaleString()+'</div></div>';if(!al.acknowledged)o+='<button class="filter-btn" style="padding:4px 10px;font-size:11px" onclick="ackAlert(\\''+al.id+'\\')">Ack</button>';o+='</div>'});o+='</div></div>';c.innerHTML=o})}
+function ackAlert(id){apiFetch('/alerts/'+id+'/acknowledge',{method:'POST'}).then(function(){showSection('alerts')})}
+function loadRecs(c){apiFetch('/recommendations/trending?period=24h').then(function(r){var d=r.data||{};var o='<div class="header"><h1>Recommendations</h1><button class="refresh-btn" onclick="showSection(\'recommendations\')">&#8635; Refresh</button></div>';o+='<div class="card"><div class="card-header"><h2>Trending Channels</h2></div><div class="card-body"><table><thead><tr><th>Channel</th><th>Views</th><th>Unique</th></tr></thead><tbody>';(d.most_watched||[]).forEach(function(ch){o+='<tr><td>'+ch.name+'</td><td>'+ch.views+'</td><td>'+ch.unique_viewers+'</td></tr>'});o+='</tbody></table></div></div>';c.innerHTML=o})}
+showSection('dashboard');
+</script>
+</body>
+</html>
