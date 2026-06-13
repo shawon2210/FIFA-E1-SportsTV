@@ -14,7 +14,7 @@
 // ============================================================
 
 const db = require('../../config/database');
-const cache = require('../cache');
+const cache = require('../../services/cache');
 const config = require('../../config');
 
 // ── Region Configuration ────────────────────────────────────

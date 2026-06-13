@@ -11,8 +11,8 @@
 //     └── NagadProvider
 // ============================================================
 
-const db = require('../config/database');
-const cache = require('../cache');
+const db = require('../../config/database');
+const cache = require('../../services/cache');
 const crypto = require('crypto');
 
 // ── Payment Provider Interface ───────────────────────────────

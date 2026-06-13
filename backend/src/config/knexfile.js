@@ -1,7 +1,7 @@
 const path = require('path');
 require('dotenv').config();
 
-const projectRoot = path.resolve(__dirname, '..', '..', '..');
+const projectRoot = path.resolve(__dirname, '..', '..', '..', '..');
 
 module.exports = {
     client: 'pg',

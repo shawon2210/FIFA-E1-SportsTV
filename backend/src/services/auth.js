@@ -3,7 +3,7 @@
 // Register, Login, Refresh Token, Device linking
 // ============================================================
 
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 const config = require('../config');
