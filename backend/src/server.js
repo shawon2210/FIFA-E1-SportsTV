@@ -153,7 +153,7 @@ v1.use('/users', accountsRouter);
 v1.use('/organizations', orgRouter);
 
 // AI Layer (smart search, personalized home)
-v1.use('/ai', require('./services/ai').router || (() => { const r = require('express').Router(); r.get('/search?q=', (req, res) => require('./services/ai').smartSearch(req.query.q).then(d => res.json({success:true,data:d}))); return r; })());
+v1.use('/ai', require('./routes/ai'));
 
 // Admin (requires auth + admin role)
 v1.use('/admin', adminRouter);
@@ -166,9 +166,6 @@ app.use('/metrics', metricsRouter);
 
 // Serve admin dashboard
 app.use('/admin', express.static(path.join(__dirname, '..', 'admin')));
-
-// Legacy /api/ redirect to /api/v1/
-app.use('/api/channels', (req, res) => res.redirect(301, '/api/v1' + req.path));
 
 // Legacy /api/ redirect to /api/v1/
 app.use('/api/channels', (req, res) => res.redirect(301, '/api/v1' + req.path));

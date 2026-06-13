@@ -9,6 +9,8 @@ const config = require('./config');
 const db = require('./config/database');
 const cache = require('./services/cache');
 const edgeCache = require('./services/edgeCache');
+const streamIntel = require('./services/streamIntel');
+const recEngine = require('./services/recEngine');
 
 const redisConn = new Redis({
     host: config.redis.host,
@@ -48,16 +50,16 @@ const syncWorker = new Worker('iptv-sync', async (job) => {
     return result;
 }, { connection: redisConn, concurrency: 1 });
 
-// 2. Health Check (every 5 min) + Circuit Breaker update
-const healthWorker = new Worker('health-check', async () => {
+// 2. Health Check (every 5 min) + Circuit Breaker update + Stream Intel
+const healthWorker = new Worker('health-check', async (job) => {
+    if (job.data?.type === 'intel') {
+        return await streamIntel.runIntelligenceCycle();
+    }
     const health = require('./services/healthChecker');
     const cb = require('./services/circuitBreaker');
     const result = await health.runCycle();
-    // Update circuit breakers for all hosts
     const hosts = await db('stream_hosts').whereIn('status', ['healthy', 'degraded']).select('id');
-    for (const h of hosts.slice(0, 50)) { // Limit per cycle
-        await cb.updateHostStats(h.id);
-    }
+    for (const h of hosts.slice(0, 50)) await cb.updateHostStats(h.id);
     return result;
 }, { connection: redisConn, concurrency: 1 });
 
@@ -89,7 +91,10 @@ const epgScoreWorker = new Worker('epg-score', async () => {
 }, { connection: redisConn, concurrency: 1 });
 
 // 7. Recommendations (daily at 2 AM)
-const recsWorker = new Worker('recommendations', async () => {
+const recsWorker = new Worker('recommendations', async (job) => {
+    if (job.data?.type === 'full') {
+        return await recEngine.regenerateAll();
+    }
     const svc = require('./services/recommendations');
     await svc.regenerateAll();
     return { status: 'ok' };
@@ -120,14 +125,18 @@ async function setupScheduledJobs() {
         { queue: queues.recommendations, name: 'recs', data: {}, cron: '0 2 * * *', id: 'sch-recs' },
         { queue: queues.alerts, name: 'alerts', data: {}, cron: '* * * * *', id: 'sch-alerts' },
         { queue: queues.backup, name: 'backup', data: { type: 'postgres' }, cron: '0 3 * * *', id: 'sch-backup' },
-        // Edge cache preload: every 5 minutes
-        { queue: queues.sync, name: 'edge-preload', data: { type: 'edge-cache' }, cron: '*/5 * * * *', id: 'sch-edge-preload' },
+        // Stream intelligence: every 5 minutes
+        { queue: queues.health, name: 'stream-intel', data: { type: 'intel' }, cron: '*/5 * * * *', id: 'sch-stream-intel' },
+        // Recommendation regeneration: every 6 hours
+        { queue: queues.recommendations, name: 'recs-regen', data: { type: 'full' }, cron: '0 */6 * * *', id: 'sch-recs-regen' },
+        // Edge cache preload: every 3 minutes
+        { queue: queues.sync, name: 'edge-preload', data: { type: 'edge-cache' }, cron: '*/3 * * * *', id: 'sch-edge-preload' },
     ];
 
     for (const job of jobs) {
         await job.queue.add(job.name, job.data, { repeat: { cron: job.cron }, jobId: job.id });
     }
-    console.log(`✓ Configured ${jobs.length} scheduled jobs`);
+    console.log('✓ Configured ' + jobs.length + ' scheduled jobs');
 }
 
 // ── Event Handlers ────────────────────────────────────────
