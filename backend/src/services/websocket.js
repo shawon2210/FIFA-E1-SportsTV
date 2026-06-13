@@ -3,7 +3,6 @@
 // Real-time events: stream_online, stream_offline, channel_updated, epg_updated
 // ============================================================
 
-const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
@@ -17,8 +16,12 @@ class WebSocketService {
 
     /**
      * Initialize Socket.IO server attached to an HTTP server.
+     * Lazy-loads socket.io to avoid native module conflicts during import chain.
      */
     init(httpServer, corsOrigins) {
+        // Lazy require to avoid native module conflict with express on Node 22/WSL2
+        const { Server } = require('socket.io');
+
         this.io = new Server(httpServer, {
             cors: { origin: corsOrigins, methods: ['GET', 'POST'] },
             pingTimeout: 30000,

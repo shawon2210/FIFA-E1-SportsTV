@@ -17,7 +17,7 @@ class AuditService {
                 actor_type: actor?.type || 'user',
                 target_type: target?.type || null,
                 target_id: target?.id || null,
-                details: JSONB(details),
+                details: JSON.stringify(details),
                 ip_address: ipAddress || null,
                 user_agent: userAgent?.substring(0, 200) || null,
                 created_at: new Date(),
@@ -109,9 +109,9 @@ class SecurityMonitor {
                 severity: 'critical',
                 identifier,
                 ip_address: ip,
-                details: { attempts: attempts + 1 },
+                details: JSON.stringify({ attempts: attempts + 1 }),
                 created_at: new Date(),
-            }).onConflict().ignore();
+            }).onConflict('id').ignore();
 
             return { blocked: true, attempts: attempts + 1 };
         }
